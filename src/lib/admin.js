@@ -1,0 +1,269 @@
+import { supabase } from './supabaseClient.js'
+
+const NOT_CONFIGURED_ERROR =
+  'Supabase isn\u2019t connected yet — admin actions will start working once it is.'
+
+function startOfDay(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+function startOfWeek(date = new Date()) {
+  const day = date.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  const next = new Date(date)
+  next.setDate(date.getDate() + diff)
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function startOfMonth(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function startOfRollingDays(days, date = new Date()) {
+  const next = new Date(date)
+  next.setDate(next.getDate() - (days - 1))
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function sumAmounts(rows) {
+  return rows.reduce((sum, row) => sum + Number(row.amount || 0), 0)
+}
+
+function countSince(rows, startDate) {
+  return rows.filter((row) => new Date(row.created_at) >= startDate).length
+}
+
+function buildRevenueStats(orderRows) {
+  const now = new Date()
+  const paid = orderRows.filter((row) => row.status === 'paid')
+  const pending = orderRows.filter((row) => row.status === 'pending')
+  const failed = orderRows.filter((row) => row.status === 'failed')
+
+  const todayStart = startOfDay(now)
+  const weekStart = startOfWeek(now)
+  const monthStart = startOfMonth(now)
+  const rolling7Start = startOfRollingDays(7, now)
+  const rolling30Start = startOfRollingDays(30, now)
+  const rolling90Start = startOfRollingDays(90, now)
+
+  const paidToday = paid.filter((row) => new Date(row.created_at) >= todayStart)
+  const paidThisWeek = paid.filter((row) => new Date(row.created_at) >= weekStart)
+  const paidThisMonth = paid.filter((row) => new Date(row.created_at) >= monthStart)
+  const paid7d = paid.filter((row) => new Date(row.created_at) >= rolling7Start)
+  const paid30d = paid.filter((row) => new Date(row.created_at) >= rolling30Start)
+  const paid90d = paid.filter((row) => new Date(row.created_at) >= rolling90Start)
+
+  const paidRevenue = sumAmounts(paid)
+  const pendingRevenue = sumAmounts(pending)
+
+  return {
+    todayRevenue: sumAmounts(paidToday),
+    weekRevenue: sumAmounts(paidThisWeek),
+    monthRevenue: sumAmounts(paidThisMonth),
+    totalRevenue: paidRevenue,
+    paidOrdersToday: paidToday.length,
+    paidOrdersWeek: paidThisWeek.length,
+    paidOrdersMonth: paidThisMonth.length,
+    averageOrderValue: paid.length ? paidRevenue / paid.length : 0,
+    pendingCount: pending.length,
+    pendingRevenue,
+    paidCount: paid.length,
+    failedCount: failed.length,
+    totalOrdersToday: countSince(orderRows, todayStart),
+    revenueRanges: {
+      '7d': {
+        label: 'Last 7 days',
+        revenue: sumAmounts(paid7d),
+        orders: paid7d.length,
+      },
+      '30d': {
+        label: 'Last 30 days',
+        revenue: sumAmounts(paid30d),
+        orders: paid30d.length,
+      },
+      '90d': {
+        label: 'Last 90 days',
+        revenue: sumAmounts(paid90d),
+        orders: paid90d.length,
+      },
+      month: {
+        label: 'This month',
+        revenue: sumAmounts(paidThisMonth),
+        orders: paidThisMonth.length,
+      },
+      all: {
+        label: 'All time',
+        revenue: paidRevenue,
+        orders: paid.length,
+      },
+    },
+  }
+}
+
+/**
+ * Unlike catalog.js and wishlist.js, there's no mock-data fallback here.
+ * /admin is only reachable with a real session AND role='admin' (see
+ * AdminRoute), so there's no way to exercise these functions without
+ * Supabase connected in the first place — a fallback would be dead code.
+ */
+
+// ---------- Dashboard ----------
+
+export async function fetchDashboardStats() {
+  if (!supabase) return { stats: null, error: NOT_CONFIGURED_ERROR }
+  const [designs, categories, users, ordersCount, ordersData] = await Promise.all([
+    supabase.from('designs').select('*', { count: 'exact', head: true }),
+    supabase.from('categories').select('*', { count: 'exact', head: true }),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('orders').select('*', { count: 'exact', head: true }),
+    supabase.from('orders').select('amount, status, created_at'),
+  ])
+  const firstError = [designs, categories, users, ordersCount, ordersData].find((r) => r.error)?.error
+  if (firstError) return { stats: null, error: firstError.message }
+
+  const revenue = buildRevenueStats(ordersData.data ?? [])
+
+  return {
+    stats: {
+      designs: designs.count ?? 0,
+      categories: categories.count ?? 0,
+      users: users.count ?? 0,
+      orders: ordersCount.count ?? 0,
+      ...revenue,
+    },
+    error: null,
+  }
+}
+
+export async function fetchOrdersAdmin() {
+  if (!supabase) return { orders: [], error: NOT_CONFIGURED_ERROR }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      amount,
+      status,
+      created_at,
+      razorpay_order_id,
+      profiles:user_id (
+        full_name,
+        phone,
+        email
+      ),
+      designs:design_id (
+        id,
+        name,
+        slug
+      )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) return { orders: [], error: error.message }
+  return { orders: data ?? [], error: null }
+}
+
+// ---------- Categories ----------
+
+export async function fetchAllCategories() {
+  if (!supabase) return { categories: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('categories').select('*').order('sort_order')
+  if (error) return { categories: [], error: error.message }
+  return { categories: data, error: null }
+}
+
+export async function createCategory(payload) {
+  if (!supabase) return { category: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('categories').insert(payload).select().single()
+  return { category: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateCategory(id, payload) {
+  if (!supabase) return { category: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('categories').update(payload).eq('id', id).select().single()
+  return { category: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteCategory(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('categories').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+// ---------- Products (designs) ----------
+
+/**
+ * Admin sees every design regardless of `is_active`, unlike the public
+ * catalog (`fetchDesigns` in catalog.js), which filters to active-only.
+ */
+export async function fetchAllDesigns() {
+  if (!supabase) return { designs: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('designs')
+    .select('*, categories(name)')
+    .order('created_at', { ascending: false })
+  if (error) return { designs: [], error: error.message }
+  return { designs: data, error: null }
+}
+
+export async function createDesign(payload) {
+  if (!supabase) return { design: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('designs').insert(payload).select().single()
+  return { design: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateDesign(id, payload) {
+  if (!supabase) return { design: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('designs').update(payload).eq('id', id).select().single()
+  return { design: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteDesign(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('designs').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+export async function uploadProductImage(file) {
+  if (!supabase) return { url: null, error: NOT_CONFIGURED_ERROR }
+  const path = `${Date.now()}-${file.name}`
+  const { error } = await supabase.storage.from('product-images').upload(path, file)
+  if (error) return { url: null, error: error.message }
+  const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
+/**
+ * `design-files` is a private bucket, so upload only returns a storage
+ * path, not a public URL — there's no customer-download flow yet (that
+ * depends on checkout, which is still a Buy Now stub), so signed-URL
+ * generation on demand is a follow-up rather than something to build
+ * speculatively here.
+ */
+export async function uploadDesignFile(file) {
+  if (!supabase) return { path: null, error: NOT_CONFIGURED_ERROR }
+  const path = `${Date.now()}-${file.name}`
+  const { error } = await supabase.storage.from('design-files').upload(path, file)
+  if (error) return { path: null, error: error.message }
+  return { path, error: null }
+}
+
+// ---------- Users ----------
+
+export async function fetchUsers() {
+  if (!supabase) return { users: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) return { users: [], error: error.message }
+  return { users: data, error: null }
+}
+
+export async function updateUserRole(userId, role) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
+  return { error: error?.message ?? null }
+}
