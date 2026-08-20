@@ -15,7 +15,7 @@ const craftSteps = [
   },
   {
     title: 'Digitised for the machine',
-    body: 'DST, PES, EXP and JEF exports are tested on real machines, not just converted and shipped.',
+    body: 'DST, PES, EXP, JEF, EMB, DHE and DHP exports are tested on real machines, not just converted and shipped.',
   },
   {
     title: 'Documented for the workshop',
@@ -24,7 +24,7 @@ const craftSteps = [
 ]
 
 const missionPoints = [
-  'Supported formats: DST, PES, EXP and JEF',
+  'Supported formats: DST, PES, EXP, JEF, EMB, DHE and DHP',
   'Stitch counts and sizes listed on every design',
   'Digitised from a teaching studio, not a template mill',
   'Built for saree, blouse, dupatta and yardage work',

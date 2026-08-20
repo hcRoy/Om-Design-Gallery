@@ -15,11 +15,11 @@ export const STUDIO = {
     'Ghanshyam Nagar, L.H. Road',
     'Varachha, Surat',
   ],
-  mapsQuery: '1st Floor Bhagvati Ras, Ghanshyam Nagar, L.H. Road, Varachha, Surat',
+  // Official Google Business listing — do not rebuild from address text.
+  mapsUrl: 'https://maps.app.goo.gl/5XSKJS2sE3DvgV8t6',
+  mapsEmbedUrl:
+    'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1859.76603687577!2d72.85919791744388!3d21.210739600000025!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be04ff5cacbf2af%3A0x16f9a5f759658c95!2sOm%20Design%20%26%20Classes%20(Embroidery%20Design%20%26%20Embroidery%20classes)!5e0!3m2!1sen!2sin!4v1787234192840!5m2!1sen!2sin',
 }
-
-STUDIO.mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STUDIO.mapsQuery)}`
-STUDIO.mapsEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(STUDIO.mapsQuery)}&output=embed`
 
 export const OWNERS = [
   { name: 'Nilesh Sutariya', slug: 'nilesh-sutariya', photo: null },

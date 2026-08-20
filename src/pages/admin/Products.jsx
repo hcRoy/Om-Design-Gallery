@@ -522,7 +522,7 @@ export default function Products() {
             <FileDropzone
               kind="file"
               label="Design file"
-              hint="DST / PES / EXP / JEF — stored privately"
+              hint="DST / PES / EXP / JEF / EMB / DHE / DHP — stored privately"
               uploading={fileUploading}
               fileLabel={designFileName}
               onFile={handleDesignFileUpload}

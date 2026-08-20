@@ -83,4 +83,4 @@ export async function fetchDesignBySlug(slug) {
 
 // Kept in one place so Categories/Designs filter UI and any admin form
 // (Phase 5) reference the same list rather than duplicating it.
-export const FILE_FORMATS = ['DST', 'PES', 'EXP', 'JEF']
+export const FILE_FORMATS = ['DST', 'PES', 'EXP', 'JEF', 'EMB', 'DHE', 'DHP']

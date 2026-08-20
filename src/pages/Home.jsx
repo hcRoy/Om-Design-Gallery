@@ -18,7 +18,7 @@ const steps = [
   {
     n: '02',
     title: 'Download your files',
-    body: 'Get machine-ready DST, PES, EXP or JEF files, sized and digitised for clean production.',
+    body: 'Get machine-ready DST, PES, EXP, JEF, EMB, DHE or DHP files, sized and digitised for clean production.',
   },
   {
     n: '03',
@@ -73,7 +73,7 @@ export default function Home() {
     <>
       <Seo
         title="Digital Embroidery Designs for Sarees & Fabric"
-        description="Machine-ready DST, PES, EXP and JEF embroidery design files — bridal borders, floral motifs, geometric jaal and festive booti, digitised for clean, consistent stitching."
+        description="Machine-ready DST, PES, EXP, JEF, EMB, DHE and DHP embroidery design files — bridal borders, floral motifs, geometric jaal and festive booti, digitised for clean, consistent stitching."
       />
 
       <section className="relative overflow-hidden text-ivory min-h-[78vh] flex items-center">
@@ -96,7 +96,7 @@ export default function Home() {
               <span className="italic text-gold-light">stitch-ready</span> for your machine.
             </h1>
             <p className="mt-6 text-base md:text-lg text-ivory/80 max-w-md leading-relaxed">
-              Drawn by hand in Surat, digitised as DST, PES, EXP and JEF —
+              Drawn by hand in Surat, digitised as DST, PES, EXP, JEF, EMB, DHE and DHP —
               so every border, booti and jaal stitches out exactly as it was drawn.
             </p>
             <div className="mt-9 flex flex-wrap gap-4">
