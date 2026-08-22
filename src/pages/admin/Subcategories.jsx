@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal.jsx'
 import Seo from '../../components/Seo.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
+import { useAdminFormModal } from '../../hooks/useAdminFormModal.js'
 import { slugify } from '../../lib/slugify.js'
 import {
   fetchAllCategories,
@@ -9,16 +10,18 @@ import {
   createSubcategory,
   updateSubcategory,
   deleteSubcategory,
+  uploadProductImage,
 } from '../../lib/admin.js'
 import PageHeader from '../../components/admin/PageHeader.jsx'
 import SearchBar from '../../components/admin/SearchBar.jsx'
 import EmptyState from '../../components/admin/EmptyState.jsx'
 import Alert from '../../components/admin/Alert.jsx'
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx'
+import FileDropzone from '../../components/admin/FileDropzone.jsx'
 import { Field, FormSection } from '../../components/admin/FormControls.jsx'
 import { AdminTable, RowActions } from '../../components/admin/AdminTable.jsx'
 import { TableSkeleton } from '../../components/admin/Skeleton.jsx'
-import { IconPlus, IconLayers } from '../../components/admin/icons.jsx'
+import { IconPlus, IconLayers, IconImage } from '../../components/admin/icons.jsx'
 
 const emptyForm = {
   name: '',
@@ -26,10 +29,11 @@ const emptyForm = {
   description: '',
   category_id: '',
   sort_order: 0,
+  image_url: '',
 }
 
 const tableColumns = [
-  { key: 'name', label: 'Name' },
+  { key: 'subcategory', label: 'Subcategory' },
   { key: 'category', label: 'Category' },
   { key: 'slug', label: 'Slug' },
   { key: 'sort', label: 'Sort' },
@@ -44,12 +48,21 @@ export default function Subcategories() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState(emptyForm)
+  const {
+    modalOpen,
+    closeModal,
+    openCreate: openCreateModal,
+    openEdit: openEditModal,
+    editingId,
+    form,
+    setForm,
+    slugTouched,
+    setSlugTouched,
+    fieldErrors,
+    setFieldErrors,
+  } = useAdminFormModal('subcategories', { emptyForm })
   const [saving, setSaving] = useState(false)
-  const [slugTouched, setSlugTouched] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState({})
+  const [imageUploading, setImageUploading] = useState(false)
 
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -77,31 +90,41 @@ export default function Subcategories() {
   }, [subcategories, query])
 
   const openCreate = () => {
-    setEditingId(null)
-    setForm({ ...emptyForm, category_id: categories[0]?.id ?? '' })
-    setSlugTouched(false)
-    setFieldErrors({})
-    setModalOpen(true)
+    openCreateModal({ category_id: categories[0]?.id ?? '' })
   }
 
   const openEdit = (row) => {
-    setEditingId(row.id)
-    setForm({
-      name: row.name,
-      slug: row.slug,
-      description: row.description ?? '',
-      category_id: row.category_id ?? '',
-      sort_order: row.sort_order ?? 0,
-    })
-    setSlugTouched(true)
-    setFieldErrors({})
-    setModalOpen(true)
+    openEditModal(
+      row.id,
+      {
+        name: row.name,
+        slug: row.slug,
+        description: row.description ?? '',
+        category_id: row.category_id ?? '',
+        sort_order: row.sort_order ?? 0,
+        image_url: row.image_url ?? '',
+      },
+      { slugTouched: true },
+    )
   }
 
   const handleNameChange = (e) => {
     const name = e.target.value
     setForm((f) => ({ ...f, name, slug: slugTouched ? f.slug : slugify(name) }))
     if (fieldErrors.name) setFieldErrors((err) => ({ ...err, name: undefined }))
+  }
+
+  const handleImageUpload = async (file) => {
+    if (!file) return
+    setImageUploading(true)
+    const { url, error: err } = await uploadProductImage(file)
+    setImageUploading(false)
+    if (err) {
+      setError(err)
+      showToast(err, { type: 'error' })
+      return
+    }
+    setForm((f) => ({ ...f, image_url: url }))
   }
 
   const validate = () => {
@@ -126,6 +149,7 @@ export default function Subcategories() {
       description: form.description,
       category_id: form.category_id,
       sort_order: Number(form.sort_order) || 0,
+      image_url: form.image_url || null,
     }
     const { error: err } = editingId
       ? await updateSubcategory(editingId, payload)
@@ -136,7 +160,7 @@ export default function Subcategories() {
       showToast(err, { type: 'error' })
       return
     }
-    setModalOpen(false)
+    closeModal()
     showToast(editingId ? 'Subcategory updated.' : 'Subcategory created.', { type: 'success' })
     load()
   }
@@ -211,10 +235,23 @@ export default function Subcategories() {
               {filtered.map((row) => (
                 <tr key={row.id} className="hover:bg-sand/40 transition-colors duration-150">
                   <td className="px-5 py-3.5">
-                    <p className="font-semibold text-ink">{row.name}</p>
-                    {row.description && (
-                      <p className="text-xs text-ink-soft mt-0.5 line-clamp-1">{row.description}</p>
-                    )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-lg bg-sand overflow-hidden shrink-0 ring-1 ring-ink/8">
+                        {row.image_url ? (
+                          <img src={row.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-ink-soft/40">
+                            <IconImage className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-ink">{row.name}</p>
+                        {row.description && (
+                          <p className="text-xs text-ink-soft mt-0.5 line-clamp-1">{row.description}</p>
+                        )}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-5 py-3.5 text-ink-soft">{row.categories?.name ?? '—'}</td>
                   <td className="px-5 py-3.5">
@@ -238,11 +275,22 @@ export default function Subcategories() {
             {filtered.map((row) => (
               <article key={row.id} className="admin-card p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-ink">{row.name}</p>
-                    <p className="text-xs text-ink-soft mt-0.5">
-                      {row.categories?.name ?? '—'} · {row.slug}
-                    </p>
+                  <div className="flex gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-lg bg-sand overflow-hidden shrink-0 ring-1 ring-ink/8">
+                      {row.image_url ? (
+                        <img src={row.image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-ink-soft/40">
+                          <IconImage className="w-4 h-4" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink">{row.name}</p>
+                      <p className="text-xs text-ink-soft mt-0.5">
+                        {row.categories?.name ?? '—'} · {row.slug}
+                      </p>
+                    </div>
                   </div>
                   <RowActions
                     onEdit={() => openEdit(row)}
@@ -257,21 +305,45 @@ export default function Subcategories() {
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editingId ? 'Edit Subcategory' : 'Add Subcategory'}
-        description="Subcategories nest under a parent category on the storefront."
+        description="Subcategories nest under a parent category. Add a cover image for the storefront card."
+        size="lg"
         footer={
           <>
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-ghost" disabled={saving}>
+            <button type="button" onClick={closeModal} className="btn-ghost" disabled={saving || imageUploading}>
               Cancel
             </button>
-            <button type="submit" form="subcategory-form" disabled={saving} className="btn-admin">
+            <button type="submit" form="subcategory-form" disabled={saving || imageUploading} className="btn-admin">
               {saving ? 'Saving…' : 'Save'}
             </button>
           </>
         }
       >
         <form id="subcategory-form" onSubmit={handleSubmit} className="space-y-5">
+          <FormSection title="Cover image" description="Shown when browsing subcategories under a category. Square works best.">
+            <FileDropzone
+              kind="image"
+              accept="image/*"
+              label="Subcategory image"
+              hint="JPG, PNG, or WebP — optional"
+              uploading={imageUploading}
+              previewUrl={form.image_url}
+              fileLabel={form.image_url ? 'Image attached' : ''}
+              onFile={handleImageUpload}
+              disabled={saving}
+            />
+            {form.image_url && (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, image_url: '' }))}
+                className="text-xs font-semibold text-maroon hover:underline mt-2"
+              >
+                Remove image
+              </button>
+            )}
+          </FormSection>
+
           <FormSection title="Details">
             <Field label="Parent category" htmlFor="sub-category" error={fieldErrors.category_id}>
               <select

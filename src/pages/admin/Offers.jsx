@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal.jsx'
 import Seo from '../../components/Seo.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
+import { useAdminFormModal } from '../../hooks/useAdminFormModal.js'
 import {
   fetchAllOffers,
   createOffer,
@@ -76,11 +77,18 @@ export default function Offers() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState(emptyForm)
+  const {
+    modalOpen,
+    closeModal,
+    openCreate,
+    openEdit: openEditModal,
+    editingId,
+    form,
+    setForm,
+    fieldErrors,
+    setFieldErrors,
+  } = useAdminFormModal('offers', { emptyForm })
   const [saving, setSaving] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState({})
 
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -108,16 +116,8 @@ export default function Offers() {
     })
   }, [offers, query, statusFilter])
 
-  const openCreate = () => {
-    setEditingId(null)
-    setForm(emptyForm)
-    setFieldErrors({})
-    setModalOpen(true)
-  }
-
   const openEdit = (offer) => {
-    setEditingId(offer.id)
-    setForm({
+    openEditModal(offer.id, {
       code: offer.code ?? '',
       discount_percentage: offer.discount_percentage ?? '',
       starts_at: toLocalInput(offer.starts_at),
@@ -126,8 +126,6 @@ export default function Offers() {
       usage_limit: offer.usage_limit ?? '',
       is_active: offer.is_active !== false,
     })
-    setFieldErrors({})
-    setModalOpen(true)
   }
 
   const validate = () => {
@@ -173,7 +171,7 @@ export default function Offers() {
       showToast(err, { type: 'error' })
       return
     }
-    setModalOpen(false)
+    closeModal()
     showToast(editingId ? 'Offer updated.' : 'Offer created.', { type: 'success' })
     load()
   }
@@ -309,13 +307,13 @@ export default function Offers() {
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editingId ? 'Edit Offer' : 'Add Offer'}
         description="Leave code empty for an automatic checkout discount. Discount applies to the payment total, not the catalog price."
         size="md"
         footer={
           <>
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-ghost" disabled={saving}>
+            <button type="button" onClick={closeModal} className="btn-ghost" disabled={saving}>
               Cancel
             </button>
             <button type="submit" form="offer-form" disabled={saving} className="btn-admin">

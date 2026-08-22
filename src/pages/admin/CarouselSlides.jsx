@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal.jsx'
 import Seo from '../../components/Seo.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
+import { useAdminFormModal } from '../../hooks/useAdminFormModal.js'
 import {
   fetchAllCarouselSlides,
   createCarouselSlide,
@@ -52,12 +53,19 @@ export default function CarouselSlides() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState(emptyForm)
+  const {
+    modalOpen,
+    closeModal,
+    openCreate,
+    openEdit: openEditModal,
+    editingId,
+    form,
+    setForm,
+    fieldErrors,
+    setFieldErrors,
+  } = useAdminFormModal('carousel', { emptyForm })
   const [saving, setSaving] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState({})
 
   const [pendingDelete, setPendingDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -83,16 +91,8 @@ export default function CarouselSlides() {
     })
   }, [slides, query, statusFilter])
 
-  const openCreate = () => {
-    setEditingId(null)
-    setForm(emptyForm)
-    setFieldErrors({})
-    setModalOpen(true)
-  }
-
   const openEdit = (slide) => {
-    setEditingId(slide.id)
-    setForm({
+    openEditModal(slide.id, {
       title: slide.title ?? '',
       subtitle: slide.subtitle ?? '',
       image_url: slide.image_url ?? '',
@@ -100,8 +100,6 @@ export default function CarouselSlides() {
       sort_order: slide.sort_order ?? 0,
       is_active: slide.is_active !== false,
     })
-    setFieldErrors({})
-    setModalOpen(true)
   }
 
   const handleImageUpload = async (file) => {
@@ -149,7 +147,7 @@ export default function CarouselSlides() {
       showToast(err, { type: 'error' })
       return
     }
-    setModalOpen(false)
+    closeModal()
     showToast(editingId ? 'Slide updated.' : 'Slide created.', { type: 'success' })
     load()
   }
@@ -288,13 +286,13 @@ export default function CarouselSlides() {
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editingId ? 'Edit slide' : 'Add slide'}
         description="Active slides rotate on the homepage hero. Leave title empty for image-only slides."
         size="lg"
         footer={
           <>
-            <button type="button" onClick={() => setModalOpen(false)} className="btn-ghost" disabled={saving}>
+            <button type="button" onClick={closeModal} className="btn-ghost" disabled={saving}>
               Cancel
             </button>
             <button

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import { IconX } from './admin/icons.jsx'
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { IconX } from "./admin/icons.jsx";
 
 /**
  * Reusable modal shell. Handles ESC to close, backdrop click,
@@ -14,41 +14,41 @@ export default function Modal({
   description,
   children,
   footer,
-  size = 'md',
-  variant = 'default',
+  size = "md",
+  variant = "default",
 }) {
-  const dialogRef = useRef(null)
-  const triggerRef = useRef(null)
+  const dialogRef = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     if (open) {
-      triggerRef.current = document.activeElement
-      dialogRef.current?.focus()
+      triggerRef.current = document.activeElement;
+      dialogRef.current?.focus();
     } else {
-      triggerRef.current?.focus?.()
+      triggerRef.current?.focus?.();
     }
-  }, [open])
+  }, [open]);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener('keydown', handleKey)
-      document.body.style.overflow = prev
-    }
-  }, [open, onClose])
+      window.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
 
   const widths = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-3xl',
-  }
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-3xl",
+  };
 
   return createPortal(
     <AnimatePresence>
@@ -69,8 +69,8 @@ export default function Modal({
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={title ? 'modal-title' : undefined}
-            aria-describedby={description ? 'modal-desc' : undefined}
+            aria-labelledby={title ? "modal-title" : undefined}
+            aria-describedby={description ? "modal-desc" : undefined}
             tabIndex={-1}
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -81,12 +81,17 @@ export default function Modal({
           >
             <div
               className={`flex items-start justify-between gap-4 px-6 py-5 border-b shrink-0 ${
-                variant === 'destructive' ? 'border-maroon/10 bg-maroon/[0.03]' : 'border-ink/8'
+                variant === "destructive"
+                  ? "border-maroon/10 bg-maroon/[0.03]"
+                  : "border-ink/8"
               }`}
             >
               <div className="min-w-0">
                 {title && (
-                  <h3 id="modal-title" className="text-xl md:text-2xl font-display text-ink leading-tight">
+                  <h3
+                    id="modal-title"
+                    className="text-xl md:text-2xl font-display text-ink leading-tight"
+                  >
                     {title}
                   </h3>
                 )}
@@ -106,7 +111,9 @@ export default function Modal({
               </button>
             </div>
 
-            <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">{children}</div>
+            <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">
+              {children}
+            </div>
 
             {footer && (
               <div className="px-6 py-4 border-t border-ink/8 bg-sand/40 flex items-center justify-end gap-2.5 shrink-0">
@@ -118,5 +125,5 @@ export default function Modal({
       )}
     </AnimatePresence>,
     document.body,
-  )
+  );
 }

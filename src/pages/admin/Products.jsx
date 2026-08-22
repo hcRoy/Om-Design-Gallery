@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/Modal.jsx";
 import Seo from "../../components/Seo.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
+import { useAdminFormModal } from "../../hooks/useAdminFormModal.js";
 import { slugify } from "../../lib/slugify.js";
 import { stripHtml } from "../../lib/html.js";
 import { fetchCategories, FILE_FORMATS } from "../../lib/catalog.js";
@@ -78,14 +79,24 @@ export default function Products() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  const [slugTouched, setSlugTouched] = useState(false);
+  const {
+    modalOpen,
+    closeModal,
+    openCreate,
+    openEdit: openEditModal,
+    editingId,
+    form,
+    setForm,
+    slugTouched,
+    setSlugTouched,
+    fieldErrors,
+    setFieldErrors,
+  } = useAdminFormModal("products", { emptyForm });
+
   const [saving, setSaving] = useState(false);
+
   const [imageUploading, setImageUploading] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
 
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -130,35 +141,27 @@ export default function Products() {
     });
   }, [designs, query, statusFilter]);
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm(emptyForm);
-    setSlugTouched(false);
-    setFieldErrors({});
-    setModalOpen(true);
-  };
-
   const openEdit = (d) => {
-    setEditingId(d.id);
-    setForm({
-      name: d.name,
-      slug: d.slug,
-      description: d.description ?? "",
-      price: d.price ?? "",
-      category_id: d.category_id ?? "",
-      subcategory_id: d.subcategory_id ?? "",
-      file_format: d.file_format ?? FILE_FORMATS[0],
-      area: d.area ?? "",
-      needle: d.needle ?? "",
-      tags: (d.tags ?? []).join(", "),
-      is_featured: !!d.is_featured,
-      is_active: d.is_active !== false,
-      thumbnail_url: d.thumbnail_url ?? "",
-      design_file_url: d.design_file_url ?? "",
-    });
-    setSlugTouched(true);
-    setFieldErrors({});
-    setModalOpen(true);
+    openEditModal(
+      d.id,
+      {
+        name: d.name,
+        slug: d.slug,
+        description: d.description ?? "",
+        price: d.price ?? "",
+        category_id: d.category_id ?? "",
+        subcategory_id: d.subcategory_id ?? "",
+        file_format: d.file_format ?? FILE_FORMATS[0],
+        area: d.area ?? "",
+        needle: d.needle ?? "",
+        tags: (d.tags ?? []).join(", "),
+        is_featured: !!d.is_featured,
+        is_active: d.is_active !== false,
+        thumbnail_url: d.thumbnail_url ?? "",
+        design_file_url: d.design_file_url ?? "",
+      },
+      { slugTouched: true },
+    );
   };
 
   const handleNameChange = (e) => {
@@ -268,7 +271,7 @@ export default function Products() {
       showToast(err, { type: "error" });
       return;
     }
-    setModalOpen(false);
+    closeModal();
     showToast(editingId ? "Product updated." : "Product created.", {
       type: "success",
     });
@@ -458,7 +461,7 @@ export default function Products() {
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeModal}
         title={editingId ? "Edit Product" : "Add Product"}
         description={
           editingId
@@ -470,7 +473,7 @@ export default function Products() {
           <>
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={closeModal}
               className="btn-ghost"
               disabled={saving}
             >
