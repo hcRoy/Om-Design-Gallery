@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
 import Seo from '../../components/Seo.jsx'
-import { fetchUsers, updateUserRole } from '../../lib/admin.js'
+import Modal from '../../components/Modal.jsx'
+import { fetchUsers, updateUserRole, creditUserWallet } from '../../lib/admin.js'
 import PageHeader from '../../components/admin/PageHeader.jsx'
 import SearchBar from '../../components/admin/SearchBar.jsx'
 import Badge from '../../components/admin/Badge.jsx'
@@ -10,6 +11,7 @@ import EmptyState from '../../components/admin/EmptyState.jsx'
 import Alert from '../../components/admin/Alert.jsx'
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx'
 import Tooltip from '../../components/admin/Tooltip.jsx'
+import { Field } from '../../components/admin/FormControls.jsx'
 import { AdminTable } from '../../components/admin/AdminTable.jsx'
 import { TableSkeleton } from '../../components/admin/Skeleton.jsx'
 import { IconUsers, IconChevronDown } from '../../components/admin/icons.jsx'
@@ -32,9 +34,18 @@ const tableColumns = [
   { key: 'user', label: 'User' },
   { key: 'phone', label: 'Phone' },
   { key: 'email', label: 'Email' },
+  { key: 'wallet', label: 'Wallet' },
   { key: 'role', label: 'Role' },
   { key: 'actions', label: 'Access', align: 'right' },
 ]
+
+function formatMoney(value) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))
+}
 
 function initials(u) {
   const name = u.full_name?.trim()
@@ -74,7 +85,7 @@ function RoleSelect({ value, disabled, title, busy, onChange }) {
 }
 
 export default function Users() {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, session } = useAuth()
   const { showToast } = useToast()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -83,6 +94,11 @@ export default function Users() {
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [pendingPromote, setPendingPromote] = useState(null)
+
+  const [creditUser, setCreditUser] = useState(null)
+  const [creditAmount, setCreditAmount] = useState('')
+  const [creditNote, setCreditNote] = useState('')
+  const [crediting, setCrediting] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -136,6 +152,45 @@ export default function Users() {
     await applyRole(u, 'admin')
   }
 
+  const openCredit = (u) => {
+    setCreditUser(u)
+    setCreditAmount('')
+    setCreditNote('')
+  }
+
+  const handleCreditWallet = async (e) => {
+    e.preventDefault()
+    if (!creditUser) return
+    const amount = Number(creditAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast('Enter a positive credit amount.', { type: 'error' })
+      return
+    }
+    if (!session?.access_token) {
+      showToast('Please sign in again.', { type: 'error' })
+      return
+    }
+
+    setCrediting(true)
+    const { error: err } = await creditUserWallet(
+      creditUser.id,
+      amount,
+      creditNote.trim() || null,
+      session.access_token,
+    )
+    setCrediting(false)
+    if (err) {
+      setError(err)
+      showToast(err, { type: 'error' })
+      return
+    }
+    showToast(`Credited ${formatMoney(amount)} to ${creditUser.full_name || creditUser.phone}.`, {
+      type: 'success',
+    })
+    setCreditUser(null)
+    load()
+  }
+
   return (
     <div>
       <Seo title="Users" noIndex />
@@ -156,7 +211,7 @@ export default function Users() {
       />
 
       {loading ? (
-        <TableSkeleton rows={5} cols={5} />
+        <TableSkeleton rows={5} cols={6} />
       ) : users.length === 0 ? (
         <div className="admin-card">
           <EmptyState
@@ -176,14 +231,11 @@ export default function Users() {
       ) : (
         <>
           <div className="hidden md:block">
-            <AdminTable columns={tableColumns} minWidth={720}>
+            <AdminTable columns={tableColumns} minWidth={900}>
               {filtered.map((u) => {
                 const isSelf = u.id === currentUser?.id
                 return (
-                  <tr
-                    key={u.id}
-                    className="hover:bg-sand/40 transition-colors duration-150"
-                  >
+                  <tr key={u.id} className="hover:bg-sand/40 transition-colors duration-150">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-full bg-maroon/10 text-maroon text-xs font-bold flex items-center justify-center shrink-0">
@@ -204,9 +256,17 @@ export default function Users() {
                     <td className="px-5 py-3.5 text-ink-soft">{u.phone || '—'}</td>
                     <td className="px-5 py-3.5 text-ink-soft truncate max-w-[200px]">{u.email || '—'}</td>
                     <td className="px-5 py-3.5">
-                      <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>
-                        {u.role}
-                      </Badge>
+                      <p className="font-semibold tabular-nums text-ink">{formatMoney(u.wallet_balance)}</p>
+                      <button
+                        type="button"
+                        onClick={() => openCredit(u)}
+                        className="mt-1 text-[11px] font-semibold text-maroon hover:underline"
+                      >
+                        Credit wallet
+                      </button>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>{u.role}</Badge>
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <RoleSelect
@@ -243,17 +303,27 @@ export default function Users() {
                       </p>
                       <p className="text-xs text-ink-soft mt-0.5">{u.phone || '—'}</p>
                       {u.email && <p className="text-xs text-ink-soft">{u.email}</p>}
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>
-                          {u.role}
-                        </Badge>
-                        <RoleSelect
-                          value={u.role === 'admin' ? 'admin' : 'customer'}
-                          disabled={isSelf}
-                          busy={busyId === u.id}
-                          title={isSelf ? "You can't change your own role here" : undefined}
-                          onChange={(role) => handleRoleChange(u, role)}
-                        />
+                      <p className="text-sm font-semibold text-maroon tabular-nums mt-2">
+                        {formatMoney(u.wallet_balance)}
+                      </p>
+                      <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                        <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>{u.role}</Badge>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openCredit(u)}
+                            className="text-xs font-semibold text-maroon hover:underline"
+                          >
+                            Credit wallet
+                          </button>
+                          <RoleSelect
+                            value={u.role === 'admin' ? 'admin' : 'customer'}
+                            disabled={isSelf}
+                            busy={busyId === u.id}
+                            title={isSelf ? "You can't change your own role here" : undefined}
+                            onChange={(role) => handleRoleChange(u, role)}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -263,6 +333,57 @@ export default function Users() {
           </div>
         </>
       )}
+
+      <Modal
+        open={Boolean(creditUser)}
+        onClose={() => !crediting && setCreditUser(null)}
+        title="Credit wallet"
+        description={
+          creditUser
+            ? `Add balance for ${creditUser.full_name || creditUser.phone || 'this user'}.`
+            : ''
+        }
+        size="sm"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setCreditUser(null)}
+              className="btn-ghost"
+              disabled={crediting}
+            >
+              Cancel
+            </button>
+            <button type="submit" form="credit-wallet-form" className="btn-admin" disabled={crediting}>
+              {crediting ? 'Crediting…' : 'Credit wallet'}
+            </button>
+          </>
+        }
+      >
+        <form id="credit-wallet-form" onSubmit={handleCreditWallet} className="space-y-4">
+          <Field label="Amount (₹)" htmlFor="credit-amount">
+            <input
+              id="credit-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              className="admin-input"
+              value={creditAmount}
+              onChange={(e) => setCreditAmount(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Note (optional)" htmlFor="credit-note">
+            <input
+              id="credit-note"
+              className="admin-input"
+              value={creditNote}
+              onChange={(e) => setCreditNote(e.target.value)}
+              placeholder="e.g. Festival credit"
+            />
+          </Field>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={Boolean(pendingPromote)}

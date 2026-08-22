@@ -3,23 +3,26 @@ import { useSearchParams, useLocation } from 'react-router-dom'
 import Card from '../components/Card.jsx'
 import WishlistButton from '../components/WishlistButton.jsx'
 import Seo from '../components/Seo.jsx'
-import { fetchCategories, fetchDesigns, FILE_FORMATS } from '../lib/catalog.js'
+import { stripHtml } from '../lib/html.js'
+import { fetchCategories, fetchDesigns, fetchSubcategories, FILE_FORMATS } from '../lib/catalog.js'
 
 /**
- * Filters live in the URL (?category=&format=&min=&max=&q=) rather than
- * component state, so a filtered view is shareable/bookmarkable and the
- * category cards on /categories can link straight into a pre-filtered
- * result via `to="/designs?category=slug"`.
+ * Filters live in the URL (?category=&subcategory=&format=&min=&max=&q=)
+ * rather than component state, so a filtered view is shareable/bookmarkable
+ * and category / subcategory cards can link straight into a pre-filtered
+ * result.
  */
 export default function Designs() {
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const [categories, setCategories] = useState([])
+  const [subcategories, setSubcategories] = useState([])
   const [designs, setDesigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const categorySlug = params.get('category') || ''
+  const subcategorySlug = params.get('subcategory') || ''
   const format = params.get('format') || ''
   const minPrice = params.get('min') || ''
   const maxPrice = params.get('max') || ''
@@ -32,9 +35,18 @@ export default function Designs() {
   }, [])
 
   useEffect(() => {
+    if (!categorySlug) {
+      setSubcategories([])
+      return
+    }
+    fetchSubcategories(categorySlug).then(({ subcategories: s }) => setSubcategories(s))
+  }, [categorySlug])
+
+  useEffect(() => {
     setLoading(true)
     fetchDesigns({
       categorySlug: categorySlug || undefined,
+      subcategorySlug: subcategorySlug || undefined,
       format: format || undefined,
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
@@ -43,7 +55,7 @@ export default function Designs() {
       setDesigns(d)
       setLoading(false)
     })
-  }, [categorySlug, format, minPrice, maxPrice, query])
+  }, [categorySlug, subcategorySlug, format, minPrice, maxPrice, query])
 
   const updateParam = useCallback(
     (key, value) => {
@@ -55,6 +67,14 @@ export default function Designs() {
     [params, setParams],
   )
 
+  const setCategory = (slug) => {
+    const next = new URLSearchParams(params)
+    if (slug) next.set('category', slug)
+    else next.delete('category')
+    next.delete('subcategory')
+    setParams(next, { replace: true })
+  }
+
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     updateParam('q', searchInput)
@@ -65,36 +85,42 @@ export default function Designs() {
     [categories, categorySlug],
   )
 
+  const activeSubcategory = useMemo(
+    () => subcategories.find((s) => s.slug === subcategorySlug),
+    [subcategories, subcategorySlug],
+  )
+
   const clearFilters = () => {
     setParams({}, { replace: true })
     setSearchInput('')
   }
 
-  const hasActiveFilters = categorySlug || format || minPrice || maxPrice || query
+  const hasActiveFilters =
+    categorySlug || subcategorySlug || format || minPrice || maxPrice || query
+
+  const heading = activeSubcategory?.name || activeCategory?.name || 'All designs'
+  const seoDescription =
+    activeSubcategory?.description ||
+    activeCategory?.description ||
+    'Search and filter the full embroidery design catalogue by category, subcategory, price and machine file format.'
 
   return (
     <>
-      <Seo
-        title={activeCategory ? activeCategory.name : 'All Designs'}
-        description={
-          activeCategory?.description ??
-          'Search and filter the full embroidery design catalogue by category, price and machine file format.'
-        }
-      />
+      <Seo title={heading === 'All designs' ? 'All Designs' : heading} description={seoDescription} />
       <section className="bg-ivory px-6 pt-16 pb-10 md:pt-20 md:pb-12">
         <div className="max-w-6xl mx-auto">
           <p className="eyebrow text-gold-dark">
-            {activeCategory ? 'Collection' : 'Full catalogue'}
+            {activeCategory || activeSubcategory ? 'Collection' : 'Full catalogue'}
           </p>
-          <h1 className="text-3xl md:text-5xl mt-3">
-            {activeCategory ? activeCategory.name : 'All designs'}
-          </h1>
-          {activeCategory?.description && (
-            <p className="text-ink-soft mt-3 max-w-xl leading-relaxed">{activeCategory.description}</p>
-          )}
-          {!activeCategory && (
+          <h1 className="text-3xl md:text-5xl mt-3">{heading}</h1>
+          {(activeSubcategory?.description || activeCategory?.description) && (
             <p className="text-ink-soft mt-3 max-w-xl leading-relaxed">
-              Search and filter by category, price and machine file format.
+              {activeSubcategory?.description || activeCategory?.description}
+            </p>
+          )}
+          {!activeCategory && !activeSubcategory && (
+            <p className="text-ink-soft mt-3 max-w-xl leading-relaxed">
+              Search and filter by category, subcategory, price and machine file format.
             </p>
           )}
 
@@ -117,7 +143,6 @@ export default function Designs() {
       </section>
 
       <div className="max-w-6xl mx-auto px-6 py-12 grid md:grid-cols-[220px_1fr] gap-10">
-        {/* Filters */}
         <aside>
           <button
             onClick={() => setFiltersOpen((v) => !v)}
@@ -133,7 +158,7 @@ export default function Designs() {
               <ul className="space-y-2">
                 <li>
                   <button
-                    onClick={() => updateParam('category', '')}
+                    onClick={() => setCategory('')}
                     aria-pressed={!categorySlug}
                     className={`text-sm ${!categorySlug ? 'text-maroon font-semibold' : 'text-ink-soft hover:text-maroon'}`}
                   >
@@ -143,7 +168,7 @@ export default function Designs() {
                 {categories.map((c) => (
                   <li key={c.id}>
                     <button
-                      onClick={() => updateParam('category', c.slug)}
+                      onClick={() => setCategory(c.slug)}
                       aria-pressed={categorySlug === c.slug}
                       className={`text-sm ${categorySlug === c.slug ? 'text-maroon font-semibold' : 'text-ink-soft hover:text-maroon'}`}
                     >
@@ -153,6 +178,34 @@ export default function Designs() {
                 ))}
               </ul>
             </div>
+
+            {categorySlug && subcategories.length > 0 && (
+              <div>
+                <p className="eyebrow text-[11px] mb-3">Subcategory</p>
+                <ul className="space-y-2">
+                  <li>
+                    <button
+                      onClick={() => updateParam('subcategory', '')}
+                      aria-pressed={!subcategorySlug}
+                      className={`text-sm ${!subcategorySlug ? 'text-maroon font-semibold' : 'text-ink-soft hover:text-maroon'}`}
+                    >
+                      All in category
+                    </button>
+                  </li>
+                  {subcategories.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        onClick={() => updateParam('subcategory', s.slug)}
+                        aria-pressed={subcategorySlug === s.slug}
+                        className={`text-sm ${subcategorySlug === s.slug ? 'text-maroon font-semibold' : 'text-ink-soft hover:text-maroon'}`}
+                      >
+                        {s.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div>
               <p className="eyebrow text-[11px] mb-3">File format</p>
@@ -216,7 +269,6 @@ export default function Designs() {
           </div>
         </aside>
 
-        {/* Results */}
         <div>
           {loading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -248,7 +300,7 @@ export default function Designs() {
                     imageAlt={d.name}
                     eyebrow={d.file_format}
                     title={d.name}
-                    description={d.description}
+                    description={stripHtml(d.description)}
                     footer={<p className="font-semibold text-maroon">₹{d.price}</p>}
                     topRight={
                       <WishlistButton

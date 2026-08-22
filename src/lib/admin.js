@@ -192,6 +192,96 @@ export async function deleteCategory(id) {
   return { error: error?.message ?? null }
 }
 
+// ---------- Subcategories ----------
+
+export async function fetchAllSubcategories() {
+  if (!supabase) return { subcategories: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('subcategories')
+    .select('*, categories(id, name, slug)')
+    .order('sort_order', { ascending: true })
+  if (error) return { subcategories: [], error: error.message }
+  return { subcategories: data ?? [], error: null }
+}
+
+export async function createSubcategory(payload) {
+  if (!supabase) return { subcategory: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('subcategories').insert(payload).select().single()
+  return { subcategory: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateSubcategory(id, payload) {
+  if (!supabase) return { subcategory: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('subcategories').update(payload).eq('id', id).select().single()
+  return { subcategory: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteSubcategory(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('subcategories').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+// ---------- Carousel slides ----------
+
+export async function fetchAllCarouselSlides() {
+  if (!supabase) return { slides: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('carousel_slides')
+    .select('*')
+    .order('sort_order', { ascending: true })
+  if (error) return { slides: [], error: error.message }
+  return { slides: data ?? [], error: null }
+}
+
+export async function createCarouselSlide(payload) {
+  if (!supabase) return { slide: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('carousel_slides').insert(payload).select().single()
+  return { slide: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateCarouselSlide(id, payload) {
+  if (!supabase) return { slide: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('carousel_slides').update(payload).eq('id', id).select().single()
+  return { slide: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteCarouselSlide(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('carousel_slides').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+// ---------- Offers ----------
+
+export async function fetchAllOffers() {
+  if (!supabase) return { offers: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('offers')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) return { offers: [], error: error.message }
+  return { offers: data ?? [], error: null }
+}
+
+export async function createOffer(payload) {
+  if (!supabase) return { offer: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('offers').insert(payload).select().single()
+  return { offer: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateOffer(id, payload) {
+  if (!supabase) return { offer: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('offers').update(payload).eq('id', id).select().single()
+  return { offer: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteOffer(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('offers').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
 // ---------- Products (designs) ----------
 
 /**
@@ -202,7 +292,7 @@ export async function fetchAllDesigns() {
   if (!supabase) return { designs: [], error: NOT_CONFIGURED_ERROR }
   const { data, error } = await supabase
     .from('designs')
-    .select('*, categories(name)')
+    .select('*, categories(name), subcategories(name, slug, category_id)')
     .order('created_at', { ascending: false })
   if (error) return { designs: [], error: error.message }
   return { designs: data, error: null }
@@ -266,4 +356,23 @@ export async function updateUserRole(userId, role) {
   if (!supabase) return { error: NOT_CONFIGURED_ERROR }
   const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
   return { error: error?.message ?? null }
+}
+
+export async function creditUserWallet(targetUserId, amount, note, accessToken) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  try {
+    const { callEdgeFunction } = await import('./razorpay.js')
+    const data = await callEdgeFunction(
+      'admin-credit-wallet',
+      {
+        target_user_id: targetUserId,
+        amount: Number(amount),
+        note: note || null,
+      },
+      accessToken,
+    )
+    return { data, error: null }
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Failed to credit wallet' }
+  }
 }

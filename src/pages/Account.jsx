@@ -73,7 +73,7 @@ export default function Account() {
 
     supabase
       .from('orders')
-      .select('id,status,amount,created_at,design_id')
+      .select('id,status,amount,created_at,design_id,payment_method')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(async ({ data, error: err }) => {
@@ -136,6 +136,22 @@ export default function Account() {
           Supabase isn&rsquo;t connected yet — this form is fully wired but
           has nothing to save to until the project URL and anon key are
           added.
+        </div>
+      )}
+
+      {configured && (
+        <div className="mb-8 max-w-xl rounded-xl border border-ink/10 bg-white px-5 py-4">
+          <p className="text-xs uppercase tracking-wider text-ink-soft">Wallet balance</p>
+          <p className="mt-2 text-3xl font-display text-maroon tabular-nums">
+            {new Intl.NumberFormat('en-IN', {
+              style: 'currency',
+              currency: 'INR',
+              maximumFractionDigits: 2,
+            }).format(Number(profile?.wallet_balance ?? 0))}
+          </p>
+          <p className="mt-2 text-xs text-ink-soft">
+            Use your wallet at checkout when the balance fully covers the total.
+          </p>
         </div>
       )}
 
@@ -240,6 +256,7 @@ export default function Account() {
                   <tr className="text-left text-xs uppercase tracking-widest2 text-ink-soft bg-sand/50 border-b border-ink/10">
                     <th className="px-4 py-3 font-semibold">Status</th>
                     <th className="px-4 py-3 font-semibold">Amount</th>
+                    <th className="px-4 py-3 font-semibold">Paid via</th>
                     <th className="px-4 py-3 font-semibold">Date</th>
                     <th className="px-4 py-3 font-semibold">Design</th>
                     <th className="px-4 py-3 font-semibold text-right">Action</th>
@@ -261,6 +278,9 @@ export default function Account() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-ink-soft">₹{o.amount}</td>
+                        <td className="px-4 py-4 text-ink-soft capitalize">
+                          {o.payment_method || '—'}
+                        </td>
                         <td className="px-4 py-4 text-ink-soft">
                           {o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}
                         </td>

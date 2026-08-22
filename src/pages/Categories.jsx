@@ -56,7 +56,7 @@ export default function Categories() {
             {categories.map((cat) => (
               <CategoryCard
                 key={cat.id}
-                to={`/designs?category=${cat.slug}`}
+                to={`/categories/${cat.slug}`}
                 name={cat.name}
                 description={cat.description}
                 image={cat.image_url}

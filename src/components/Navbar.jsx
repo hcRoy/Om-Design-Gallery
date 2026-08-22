@@ -15,8 +15,14 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const { session, loading } = useAuth()
+  const { session, loading, profile } = useAuth()
   const navigate = useNavigate()
+
+  const walletLabel = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(Number(profile?.wallet_balance ?? 0))
 
   return (
     <header className="sticky top-0 z-40 bg-ivory/95 backdrop-blur border-b border-ink/10">
@@ -93,6 +99,9 @@ export default function Navbar() {
               ))}
               {!loading && (session ? (
                 <>
+                  <p className="text-sm font-semibold text-maroon tabular-nums">
+                    Wallet: {walletLabel}
+                  </p>
                   <NavLink to="/account" onClick={() => setOpen(false)} className="text-base font-semibold text-ink-soft">
                     My Account
                   </NavLink>

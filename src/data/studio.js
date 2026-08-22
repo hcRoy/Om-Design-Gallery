@@ -22,10 +22,10 @@ export const STUDIO = {
 }
 
 export const OWNERS = [
-  { name: 'Nilesh Sutariya', slug: 'nilesh-sutariya', photo: null },
-  { name: 'Bhavesh Mangukiya', slug: 'bhavesh-mangukiya', photo: null },
-  { name: 'Bhavdip Sutariya', slug: 'bhavdip-sutariya', photo: null },
-  { name: 'Ajay Sutariya', slug: 'ajay-sutariya', photo: null },
+  { name: 'Nilesh Sutariya', slug: 'nilesh-sutariya', photo: '/owners/nilesh-sutariya.png' },
+  { name: 'Bhavesh Mangukiya', slug: 'bhavesh-mangukiya', photo: '/owners/bhavesh-mangukiya.png' },
+  { name: 'Bhavdip Sutariya', slug: 'bhavdip-sutariya', photo: '/owners/bhavdip-sutariya.png' },
+  { name: 'Ajay Sutariya', slug: 'ajay-sutariya', photo: '/owners/ajay-sutariya.png' },
 ]
 
 export const LOGO_SRC = '/logo.png'

@@ -73,6 +73,17 @@ serve(async (req) => {
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+  const { data: existing, error: existingErr } = await supabase
+    .from("orders")
+    .select("id,status,offer_id")
+    .eq("razorpay_order_id", razorpayOrderId)
+    .maybeSingle();
+
+  if (existingErr) {
+    return jsonResponse({ error: existingErr.message }, 500);
+  }
+
   const { error: updateErr } = await supabase
     .from("orders")
     .update({ status: newStatus })
@@ -80,6 +91,18 @@ serve(async (req) => {
 
   if (updateErr) {
     return jsonResponse({ error: updateErr.message }, 500);
+  }
+
+  // If the browser never reached verify-razorpay-payment, still consume
+  // the offer when the webhook is the first path that marks the order paid.
+  // consume_order_offer_usage is idempotent if verify already counted it.
+  if (newStatus === "paid" && existing?.id) {
+    const { error: usageErr } = await supabase.rpc("consume_order_offer_usage", {
+      p_order_id: existing.id,
+    });
+    if (usageErr) {
+      return jsonResponse({ error: usageErr.message }, 500);
+    }
   }
 
   return jsonResponse({ ok: true }, 200);

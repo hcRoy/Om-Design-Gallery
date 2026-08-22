@@ -1,22 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-} as const;
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
-}
+import { corsPreflightResponse, jsonResponse } from "../_shared/cors.ts";
 
 async function requireUser(req: Request) {
   const authHeader = req.headers.get("Authorization") || "";
@@ -59,7 +44,7 @@ async function hmacSha256Hex(secret: string, message: string) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: { ...corsHeaders } });
+    return corsPreflightResponse();
   }
 
   if (req.method !== "POST") {
@@ -92,7 +77,7 @@ serve(async (req) => {
 
   const { data: order, error: orderErr } = await supabase
     .from("orders")
-    .select("id,user_id,status,design_id,razorpay_order_id")
+    .select("id,user_id,status,design_id,razorpay_order_id,offer_id")
     .eq("razorpay_order_id", razorpayOrderId)
     .maybeSingle();
 
@@ -116,6 +101,14 @@ serve(async (req) => {
     .eq("id", order.id);
 
   if (paidErr) return jsonResponse({ error: paidErr.message }, 500);
+
+  // Increment coded/automatic offer usage only once (safe across verify + webhook).
+  if (order.offer_id) {
+    const { error: usageErr } = await supabase.rpc("consume_order_offer_usage", {
+      p_order_id: order.id,
+    });
+    if (usageErr) return jsonResponse({ error: usageErr.message }, 500);
+  }
 
   const { data: design, error: designErr } = await supabase
     .from("designs")

@@ -4,10 +4,11 @@ import { Link, useLocation } from 'react-router-dom'
 import Section from '../components/Section.jsx'
 import Card from '../components/Card.jsx'
 import CategoryCard from '../components/CategoryCard.jsx'
-import ThreadDivider from '../components/ThreadDivider.jsx'
+import HeroCarousel, { StaticHomeHero } from '../components/HeroCarousel.jsx'
 import Seo from '../components/Seo.jsx'
 import WishlistButton from '../components/WishlistButton.jsx'
-import { fetchCategories, fetchDesigns } from '../lib/catalog.js'
+import { stripHtml } from '../lib/html.js'
+import { fetchActiveCarouselSlides, fetchCategories, fetchDesigns } from '../lib/catalog.js'
 
 const steps = [
   {
@@ -18,7 +19,7 @@ const steps = [
   {
     n: '02',
     title: 'Download your files',
-    body: 'Get machine-ready DST, PES, EXP, JEF, EMB, DHE or DHP files, sized and digitised for clean production.',
+    body: 'Get machine-ready DST, EMB, DHE or DHP files, sized and digitised for clean production.',
   },
   {
     n: '03',
@@ -51,19 +52,25 @@ export default function Home() {
   const location = useLocation()
   const [categories, setCategories] = useState([])
   const [designs, setDesigns] = useState([])
+  const [slides, setSlides] = useState([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
+  const [heroReady, setHeroReady] = useState(false)
 
   useEffect(() => {
     let active = true
-    Promise.all([fetchCategories(), fetchDesigns()]).then(([catRes, desRes]) => {
-      if (!active) return
-      setCategories(catRes.categories ?? [])
-      const all = desRes.designs ?? []
-      const featured = all.filter((d) => d.is_featured)
-      const rest = all.filter((d) => !d.is_featured)
-      setDesigns([...featured, ...rest].slice(0, 6))
-      setLoadingCatalog(false)
-    })
+    Promise.all([fetchCategories(), fetchDesigns(), fetchActiveCarouselSlides()]).then(
+      ([catRes, desRes, slideRes]) => {
+        if (!active) return
+        setCategories(catRes.categories ?? [])
+        const all = desRes.designs ?? []
+        const featured = all.filter((d) => d.is_featured)
+        const rest = all.filter((d) => !d.is_featured)
+        setDesigns([...featured, ...rest].slice(0, 6))
+        setSlides(slideRes.slides ?? [])
+        setLoadingCatalog(false)
+        setHeroReady(true)
+      },
+    )
     return () => {
       active = false
     }
@@ -73,43 +80,18 @@ export default function Home() {
     <>
       <Seo
         title="Digital Embroidery Designs for Sarees & Fabric"
-        description="Machine-ready DST, PES, EXP, JEF, EMB, DHE and DHP embroidery design files — bridal borders, floral motifs, geometric jaal and festive booti, digitised for clean, consistent stitching."
+        description="Machine-ready DST, EMB, DHE and DHP embroidery design files — bridal borders, floral motifs, geometric jaal and festive booti, digitised for clean, consistent stitching."
       />
 
-      <section className="relative overflow-hidden text-ivory min-h-[78vh] flex items-center">
-        <div className="absolute inset-0 page-hero-gradient" />
-        <div className="absolute inset-0 opacity-20 pointer-events-none" aria-hidden="true">
-          <ThreadDivider variant="wave" color="#C9A227" className="absolute top-[18%] left-0 h-16" />
-          <ThreadDivider variant="stitch" color="#E0C368" className="absolute top-[42%] left-0 h-20" />
-          <ThreadDivider variant="wave" color="#C9A227" className="absolute bottom-[16%] left-0 h-14" />
-        </div>
-        <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-32 w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-            className="max-w-2xl"
-          >
-            <p className="eyebrow text-gold-light">Digital embroidery designs</p>
-            <h1 className="text-4xl md:text-6xl mt-5 leading-[1.08] text-ivory">
-              Embroidery designs,{' '}
-              <span className="italic text-gold-light">stitch-ready</span> for your machine.
-            </h1>
-            <p className="mt-6 text-base md:text-lg text-ivory/80 max-w-md leading-relaxed">
-              Drawn by hand in Surat, digitised as DST, PES, EXP, JEF, EMB, DHE and DHP —
-              so every border, booti and jaal stitches out exactly as it was drawn.
-            </p>
-            <div className="mt-9 flex flex-wrap gap-4">
-              <Link to="/designs" className="btn-light">
-                Browse all designs
-              </Link>
-              <Link to="/categories" className="btn-ghost-light">
-                Explore categories
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {!heroReady ? (
+        <section className="relative overflow-hidden text-ivory min-h-[78vh] flex items-center">
+          <div className="absolute inset-0 page-hero-gradient" />
+        </section>
+      ) : slides.length > 0 ? (
+        <HeroCarousel slides={slides} />
+      ) : (
+        <StaticHomeHero />
+      )}
 
       <Section
         eyebrow="How it works"
@@ -183,7 +165,7 @@ export default function Home() {
             {categories.slice(0, 3).map((cat) => (
               <CategoryCard
                 key={cat.id}
-                to={`/designs?category=${cat.slug}`}
+                to={`/categories/${cat.slug}`}
                 name={cat.name}
                 description={cat.description}
                 image={cat.image_url}
@@ -222,7 +204,7 @@ export default function Home() {
                 imageAlt={d.name}
                 eyebrow={d.file_format}
                 title={d.name}
-                description={d.description}
+                description={stripHtml(d.description)}
                 footer={<p className="font-semibold text-maroon">₹{d.price}</p>}
                 topRight={
                   <WishlistButton

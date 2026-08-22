@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js'
-import { mockCategories, mockDesigns } from '../data/mockCatalog.js'
+import { mockCategories, mockDesigns, mockSubcategories } from '../data/mockCatalog.js'
 
 /**
  * Every function here checks `supabase` first and runs the real query
@@ -30,16 +30,56 @@ export async function fetchCategoryBySlug(slug) {
   return { category: mockCategories.find((c) => c.slug === slug) ?? null, error: null }
 }
 
+export async function fetchSubcategories(categorySlug) {
+  if (supabase) {
+    let q = supabase
+      .from('subcategories')
+      .select('*, categories!inner(id, slug, name)')
+      .order('sort_order', { ascending: true })
+    if (categorySlug) q = q.eq('categories.slug', categorySlug)
+    const { data, error } = await q
+    if (error) return { subcategories: [], error: error.message }
+    return { subcategories: data ?? [], error: null }
+  }
+
+  let rows = [...mockSubcategories]
+  if (categorySlug) {
+    const cat = mockCategories.find((c) => c.slug === categorySlug)
+    rows = cat ? rows.filter((s) => s.category_id === cat.id) : []
+  }
+  return {
+    subcategories: rows.sort((a, b) => a.sort_order - b.sort_order),
+    error: null,
+  }
+}
+
 /**
- * filters: { categorySlug, format, minPrice, maxPrice, query }
+ * filters: { categorySlug, subcategorySlug, format, minPrice, maxPrice, query }
  * All optional. `query` matches against name/description/tags.
  */
 export async function fetchDesigns(filters = {}) {
-  const { categorySlug, format, minPrice, maxPrice, query } = filters
+  const { categorySlug, subcategorySlug, format, minPrice, maxPrice, query } = filters
 
   if (supabase) {
-    let q = supabase.from('designs').select('*, categories!inner(slug, name)').eq('is_active', true)
-    if (categorySlug) q = q.eq('categories.slug', categorySlug)
+    let q = supabase
+      .from('designs')
+      .select('*, categories(slug, name), subcategories(slug, name)')
+      .eq('is_active', true)
+
+    if (subcategorySlug) {
+      q = supabase
+        .from('designs')
+        .select('*, categories(slug, name), subcategories!inner(slug, name)')
+        .eq('is_active', true)
+        .eq('subcategories.slug', subcategorySlug)
+    } else if (categorySlug) {
+      q = supabase
+        .from('designs')
+        .select('*, categories!inner(slug, name), subcategories(slug, name)')
+        .eq('is_active', true)
+        .eq('categories.slug', categorySlug)
+    }
+
     if (format) q = q.eq('file_format', format)
     if (minPrice != null) q = q.gte('price', minPrice)
     if (maxPrice != null) q = q.lte('price', maxPrice)
@@ -50,7 +90,8 @@ export async function fetchDesigns(filters = {}) {
   }
 
   let results = mockDesigns.filter((d) => d.is_active)
-  if (categorySlug) results = results.filter((d) => d.category_slug === categorySlug)
+  if (subcategorySlug) results = results.filter((d) => d.subcategory_slug === subcategorySlug)
+  else if (categorySlug) results = results.filter((d) => d.category_slug === categorySlug)
   if (format) results = results.filter((d) => d.file_format === format)
   if (minPrice != null) results = results.filter((d) => d.price >= minPrice)
   if (maxPrice != null) results = results.filter((d) => d.price <= maxPrice)
@@ -70,17 +111,40 @@ export async function fetchDesignBySlug(slug) {
   if (supabase) {
     const { data, error } = await supabase
       .from('designs')
-      .select('*, categories(name, slug)')
+      .select('*, categories(name, slug), subcategories(name, slug, category_id)')
       .eq('slug', slug)
       .eq('is_active', true)
       .single()
     if (error) return { design: null, error: error.message }
     return { design: data, error: null }
   }
-  const design = mockDesigns.find((d) => d.slug === slug && d.is_active) ?? null
-  return { design, error: null }
+  const raw = mockDesigns.find((d) => d.slug === slug && d.is_active) ?? null
+  if (!raw) return { design: null, error: null }
+  const cat = mockCategories.find((c) => c.id === raw.category_id)
+  const sub = mockSubcategories.find((s) => s.id === raw.subcategory_id)
+  return {
+    design: {
+      ...raw,
+      categories: cat ? { name: cat.name, slug: cat.slug } : null,
+      subcategories: sub ? { name: sub.name, slug: sub.slug, category_id: sub.category_id } : null,
+    },
+    error: null,
+  }
+}
+
+export async function fetchActiveCarouselSlides() {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('carousel_slides')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+    if (error) return { slides: [], error: error.message }
+    return { slides: data ?? [], error: null }
+  }
+  return { slides: [], error: null }
 }
 
 // Kept in one place so Categories/Designs filter UI and any admin form
 // (Phase 5) reference the same list rather than duplicating it.
-export const FILE_FORMATS = ['DST', 'PES', 'EXP', 'JEF', 'EMB', 'DHE', 'DHP']
+export const FILE_FORMATS = ['DST', 'EMB', 'DHE', 'DHP']

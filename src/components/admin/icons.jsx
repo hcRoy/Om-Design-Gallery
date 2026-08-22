@@ -180,6 +180,25 @@ export function IconSparkle(props) {
   )
 }
 
+export function IconLayers(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+      <path d="m2 12 10 5 10-5" />
+      <path d="m2 17 10 5 10-5" />
+    </Svg>
+  )
+}
+
+export function IconTag(props) {
+  return (
+    <Svg {...props}>
+      <path d="M20.6 13.4 12.1 21.9a2 2 0 0 1-2.8 0L2 14.6V4h10.6l8 8a2 2 0 0 1 0 2.8z" />
+      <circle cx="7.5" cy="7.5" r="1.2" />
+    </Svg>
+  )
+}
+
 export function IconChevronDown(props) {
   return (
     <Svg {...props}>

@@ -26,6 +26,10 @@ const AdminProducts = lazy(() => import('./pages/admin/Products.jsx'))
 const AdminCategories = lazy(() => import('./pages/admin/Categories.jsx'))
 const AdminUsers = lazy(() => import('./pages/admin/Users.jsx'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders.jsx'))
+const AdminOffers = lazy(() => import('./pages/admin/Offers.jsx'))
+const AdminSubcategories = lazy(() => import('./pages/admin/Subcategories.jsx'))
+const AdminCarousel = lazy(() => import('./pages/admin/CarouselSlides.jsx'))
+const CategoryDetail = lazy(() => import('./pages/CategoryDetail.jsx'))
 
 function PageLoader() {
   return (
@@ -62,6 +66,7 @@ export default function App() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/categories" element={<Categories />} />
+                <Route path="/categories/:slug" element={<CategoryDetail />} />
                 <Route path="/designs" element={<Designs />} />
                 <Route path="/designs/:slug" element={<DesignDetail />} />
                 <Route
@@ -91,8 +96,11 @@ export default function App() {
                   <Route index element={<AdminDashboard />} />
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="categories" element={<AdminCategories />} />
+                  <Route path="subcategories" element={<AdminSubcategories />} />
+                  <Route path="carousel" element={<AdminCarousel />} />
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="orders" element={<AdminOrders />} />
+                  <Route path="offers" element={<AdminOffers />} />
                 </Route>
               </Routes>
             </Suspense>

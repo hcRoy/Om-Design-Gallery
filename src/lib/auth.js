@@ -49,9 +49,12 @@ export async function fetchProfile(userId) {
 
 export async function updateProfile(userId, updates) {
   if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  // Never allow the client to write wallet_balance — credits/debits go
+  // through the security-definer adjust_wallet_balance path only.
+  const { wallet_balance: _ignored, ...safeUpdates } = updates || {}
   const { data, error } = await supabase
     .from('profiles')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...safeUpdates, updated_at: new Date().toISOString() })
     .eq('id', userId)
     .select()
     .single()
