@@ -10,6 +10,7 @@ import Seo from '../components/Seo.jsx'
 import { callEdgeFunction, loadRazorpayCheckoutScript } from '../lib/razorpay.js'
 
 const specRows = (design) => [
+  ['Design ID', design.design_id],
   ['File format', design.file_format],
   ['Area', design.area],
   ['Needle', design.needle],
@@ -325,7 +326,7 @@ export default function DesignDetail() {
                 src={gallery[activeImage]}
                 alt={`${design.name} — view ${activeImage + 1}`}
                 loading="eager"
-                className="w-full h-full object-cover"
+                className="img-design"
               />
             ) : (
               <p className="text-xs text-ink-soft/60">[ product image slot {activeImage + 1} ]</p>
@@ -336,13 +337,18 @@ export default function DesignDetail() {
               {gallery.map((img, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => setActiveImage(i)}
                   aria-label={`View image ${i + 1}`}
-                  className={`w-16 h-16 rounded-sm bg-sand border-2 flex items-center justify-center ${
+                  className={`w-16 h-16 rounded-sm bg-sand border-2 overflow-hidden flex items-center justify-center ${
                     activeImage === i ? 'border-maroon' : 'border-transparent'
                   }`}
                 >
-                  <span className="text-[10px] text-ink-soft/60">{i + 1}</span>
+                  {img ? (
+                    <img src={img} alt="" className="img-design" />
+                  ) : (
+                    <span className="text-[10px] text-ink-soft/60">{i + 1}</span>
+                  )}
                 </button>
               ))}
             </div>

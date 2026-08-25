@@ -6,6 +6,10 @@ import { IconX } from "./admin/icons.jsx";
 /**
  * Reusable modal shell. Handles ESC to close, backdrop click,
  * and returns focus to the trigger element on close.
+ *
+ * After returning from another browser tab, browsers sometimes deliver
+ * a synthetic click that would hit the backdrop and close the modal —
+ * we ignore backdrop clicks for a short window after visibility returns.
  */
 export default function Modal({
   open,
@@ -19,6 +23,7 @@ export default function Modal({
 }) {
   const dialogRef = useRef(null);
   const triggerRef = useRef(null);
+  const ignoreBackdropUntilRef = useRef(0);
 
   useEffect(() => {
     if (open) {
@@ -34,14 +39,26 @@ export default function Modal({
     const handleKey = (e) => {
       if (e.key === "Escape") onClose();
     };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        ignoreBackdropUntilRef.current = Date.now() + 400;
+      }
+    };
     window.addEventListener("keydown", handleKey);
+    document.addEventListener("visibilitychange", handleVisibility);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", handleKey);
+      document.removeEventListener("visibilitychange", handleVisibility);
       document.body.style.overflow = prev;
     };
   }, [open, onClose]);
+
+  const handleBackdropClick = () => {
+    if (Date.now() < ignoreBackdropUntilRef.current) return;
+    onClose();
+  };
 
   const widths = {
     sm: "max-w-md",
@@ -62,7 +79,7 @@ export default function Modal({
         >
           <div
             className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={handleBackdropClick}
             aria-hidden="true"
           />
           <motion.div

@@ -165,7 +165,11 @@ export default function Home() {
                 to={`/designs/${d.slug}`}
                 image={d.thumbnail_url}
                 imageAlt={d.name}
-                eyebrow={d.file_format}
+                eyebrow={
+                  d.design_id
+                    ? `#${d.design_id} · ${d.file_format}`
+                    : d.file_format
+                }
                 title={d.name}
                 description={stripHtml(d.description)}
                 footer={<p className="font-semibold text-maroon">₹{d.price}</p>}

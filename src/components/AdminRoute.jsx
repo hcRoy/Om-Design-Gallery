@@ -2,19 +2,22 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /**
- * Builds on ProtectedRoute's session check, adding the role gate.
- * Once bootstrapped, never unmounts children for background auth refresh —
- * only redirects when session/role actually changes.
+ * Session + admin role gate.
+ *
+ * After the first successful bootstrap, never unmount children for
+ * background auth noise — that was closing open admin modals when
+ * users switched browser tabs and returned.
  */
 export default function AdminRoute({ children }) {
   const { session, profile, loading } = useAuth()
 
-  if (loading) return null
+  // Initial bootstrap only — once we have an admin profile, keep the
+  // tree mounted even if session/profile briefly update in the background.
+  if (loading && !profile) return null
 
   if (!session) return <Navigate to="/" replace />
 
-  // After login, profile may still be in flight — wait without unmounting
-  // an already-rendered tree (only applies before first profile load).
+  // Right after login, wait for profile without redirecting.
   if (!profile) return null
 
   if (profile.role !== 'admin') return <Navigate to="/" replace />

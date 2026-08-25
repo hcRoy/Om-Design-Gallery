@@ -4,7 +4,6 @@ import Seo from "../../components/Seo.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useAdminFormModal } from "../../hooks/useAdminFormModal.js";
 import { slugify } from "../../lib/slugify.js";
-import { stripHtml } from "../../lib/html.js";
 import { fetchCategories, FILE_FORMATS } from "../../lib/catalog.js";
 import {
   fetchAllDesigns,
@@ -23,12 +22,19 @@ import Alert from "../../components/admin/Alert.jsx";
 import ConfirmDialog from "../../components/admin/ConfirmDialog.jsx";
 import FileDropzone from "../../components/admin/FileDropzone.jsx";
 import RichTextEditor from "../../components/admin/RichTextEditor.jsx";
+import ImagePreviewModal, {
+  PreviewThumb,
+} from "../../components/admin/ImagePreviewModal.jsx";
 import {
   Field,
   Toggle,
   FormSection,
 } from "../../components/admin/FormControls.jsx";
-import { AdminTable, RowActions } from "../../components/admin/AdminTable.jsx";
+import {
+  AdminTable,
+  ActionsCell,
+  RowActions,
+} from "../../components/admin/AdminTable.jsx";
 import { TableSkeleton } from "../../components/admin/Skeleton.jsx";
 import {
   IconPlus,
@@ -51,6 +57,7 @@ const emptyForm = {
   is_active: true,
   thumbnail_url: "",
   design_file_url: "",
+  design_id: "",
 };
 
 const STATUS_FILTERS = [
@@ -60,6 +67,7 @@ const STATUS_FILTERS = [
 ];
 
 const tableColumns = [
+  { key: "designId", label: "Design ID" },
   { key: "product", label: "Product" },
   { key: "category", label: "Category" },
   { key: "price", label: "Price" },
@@ -100,6 +108,7 @@ export default function Products() {
 
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [preview, setPreview] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -128,6 +137,7 @@ export default function Products() {
       if (statusFilter === "draft" && d.is_active) return false;
       if (!q) return true;
       const hay = [
+        d.design_id,
         d.name,
         d.slug,
         d.categories?.name,
@@ -159,6 +169,7 @@ export default function Products() {
         is_active: d.is_active !== false,
         thumbnail_url: d.thumbnail_url ?? "",
         design_file_url: d.design_file_url ?? "",
+        design_id: d.design_id ?? "",
       },
       { slugTouched: true },
     );
@@ -316,7 +327,7 @@ export default function Products() {
       <SearchBar
         value={query}
         onChange={setQuery}
-        placeholder="Search by name, slug, category, or tag…"
+        placeholder="Search by ID, name, slug, category, or tag…"
         filters={STATUS_FILTERS}
         activeFilter={statusFilter}
         onFilter={setStatusFilter}
@@ -353,48 +364,59 @@ export default function Products() {
               {filtered.map((d) => (
                 <tr
                   key={d.id}
-                  className="hover:bg-sand/40 transition-colors duration-150"
+                  className="group hover:bg-sand/40 transition-colors duration-150"
                 >
+                  <td className="px-5 py-3 whitespace-nowrap">
+                    <code className="text-xs font-semibold tabular-nums bg-sand px-2 py-0.5 rounded-md">
+                      {d.design_id || "—"}
+                    </code>
+                  </td>
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-lg bg-sand overflow-hidden shrink-0 ring-1 ring-ink/8">
-                        {d.thumbnail_url ? (
-                          <img
-                            src={d.thumbnail_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-ink-soft/40">
-                            <IconImage className="w-4 h-4" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                      <PreviewThumb
+                        src={d.thumbnail_url}
+                        alt={d.name}
+                        onPreview={() =>
+                          setPreview({
+                            src: d.thumbnail_url,
+                            title: d.name,
+                            description: d.design_id
+                              ? `Design ID ${d.design_id}`
+                              : undefined,
+                          })
+                        }
+                        emptyIcon={<IconImage className="w-4 h-4" />}
+                      />
+                      {/* Soft cap so long names don't force a huge scroll; full text in title + edit modal */}
+                      <div className="min-w-0 max-w-[16rem]" title={d.name}>
                         <p className="font-semibold text-ink truncate">
                           {d.name}
                         </p>
                         <p className="text-xs text-ink-soft truncate">
-                          {stripHtml(d.description) || d.slug}
+                          {d.slug}
                         </p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3 text-ink-soft">
-                    <span>{d.categories?.name ?? "—"}</span>
-                    {d.subcategories?.name && (
-                      <span className="block text-xs text-ink-soft/70">
-                        {d.subcategories.name}
+                    <div className="max-w-[10rem]">
+                      <span className="block truncate">
+                        {d.categories?.name ?? "—"}
                       </span>
-                    )}
+                      {d.subcategories?.name && (
+                        <span className="block text-xs text-ink-soft/70 truncate">
+                          {d.subcategories.name}
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-5 py-3 text-ink tabular-nums">
+                  <td className="px-5 py-3 text-ink tabular-nums whitespace-nowrap">
                     ₹{d.price}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3 whitespace-nowrap">
                     <Badge variant="format">{d.file_format}</Badge>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3 whitespace-nowrap">
                     <div className="flex flex-wrap gap-1.5">
                       <Badge variant={d.is_active ? "active" : "draft"}>
                         {d.is_active ? "Active" : "Draft"}
@@ -404,12 +426,12 @@ export default function Products() {
                       )}
                     </div>
                   </td>
-                  <td className="px-5 py-3">
+                  <ActionsCell>
                     <RowActions
                       onEdit={() => openEdit(d)}
                       onDelete={() => setPendingDelete(d)}
                     />
-                  </td>
+                  </ActionsCell>
                 </tr>
               ))}
             </AdminTable>
@@ -419,22 +441,25 @@ export default function Products() {
             {filtered.map((d) => (
               <article key={d.id} className="admin-card p-4">
                 <div className="flex gap-3">
-                  <div className="w-14 h-14 rounded-lg bg-sand overflow-hidden shrink-0 ring-1 ring-ink/8">
-                    {d.thumbnail_url ? (
-                      <img
-                        src={d.thumbnail_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-ink-soft/40">
-                        <IconImage className="w-5 h-5" />
-                      </div>
-                    )}
-                  </div>
+                  <PreviewThumb
+                    src={d.thumbnail_url}
+                    alt={d.name}
+                    className="w-14 h-14"
+                    onPreview={() =>
+                      setPreview({
+                        src: d.thumbnail_url,
+                        title: d.name,
+                        description: d.design_id
+                          ? `Design ID ${d.design_id}`
+                          : undefined,
+                      })
+                    }
+                    emptyIcon={<IconImage className="w-5 h-5" />}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-ink truncate">{d.name}</p>
                     <p className="text-xs text-ink-soft mt-0.5">
+                      {d.design_id ? `#${d.design_id} · ` : ""}
                       {d.categories?.name ?? "Uncategorised"}
                       {d.subcategories?.name
                         ? ` · ${d.subcategories.name}`
@@ -518,6 +543,26 @@ export default function Products() {
           </FormSection>
 
           <FormSection title="Basic information">
+            {editingId && form.design_id && (
+              <Field
+                label="Design ID"
+                htmlFor="product-design-id"
+                hint="Auto-generated when the product was created. Cannot be changed."
+              >
+                <input
+                  id="product-design-id"
+                  value={form.design_id}
+                  readOnly
+                  className="admin-input bg-sand/60 text-ink tabular-nums font-semibold cursor-default"
+                />
+              </Field>
+            )}
+            {!editingId && (
+              <p className="text-xs text-ink-soft -mt-1 mb-1">
+                A unique 6-digit Design ID will be assigned automatically on
+                save.
+              </p>
+            )}
             <Field label="Name" htmlFor="product-name" error={fieldErrors.name}>
               <input
                 id="product-name"
@@ -703,6 +748,15 @@ export default function Products() {
             : ""
         }
         confirmLabel="Delete product"
+      />
+
+      <ImagePreviewModal
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        src={preview?.src}
+        title={preview?.title}
+        description={preview?.description}
+        alt={preview?.title}
       />
     </div>
   );

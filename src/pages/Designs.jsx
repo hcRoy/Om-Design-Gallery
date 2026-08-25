@@ -129,7 +129,7 @@ export default function Designs() {
               type="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search designs by name or motif…"
+              placeholder="Search by name, motif, or design ID…"
               aria-label="Search designs"
               className="flex-1 border border-ink/15 rounded-sm px-4 py-2.5 text-sm bg-white
                          focus:outline-none focus:border-maroon"
@@ -298,7 +298,7 @@ export default function Designs() {
                     to={`/designs/${d.slug}`}
                     image={d.thumbnail_url}
                     imageAlt={d.name}
-                    eyebrow={d.file_format}
+                    eyebrow={d.design_id ? `#${d.design_id} · ${d.file_format}` : d.file_format}
                     title={d.name}
                     description={stripHtml(d.description)}
                     footer={<p className="font-semibold text-maroon">₹{d.price}</p>}

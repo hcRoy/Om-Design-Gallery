@@ -12,7 +12,7 @@ import Alert from '../../components/admin/Alert.jsx'
 import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx'
 import Tooltip from '../../components/admin/Tooltip.jsx'
 import { Field } from '../../components/admin/FormControls.jsx'
-import { AdminTable } from '../../components/admin/AdminTable.jsx'
+import { AdminTable, ActionsCell } from '../../components/admin/AdminTable.jsx'
 import { TableSkeleton } from '../../components/admin/Skeleton.jsx'
 import { IconUsers, IconChevronDown } from '../../components/admin/icons.jsx'
 
@@ -231,17 +231,17 @@ export default function Users() {
       ) : (
         <>
           <div className="hidden md:block">
-            <AdminTable columns={tableColumns} minWidth={900}>
+            <AdminTable columns={tableColumns} minWidth={800}>
               {filtered.map((u) => {
                 const isSelf = u.id === currentUser?.id
                 return (
-                  <tr key={u.id} className="hover:bg-sand/40 transition-colors duration-150">
+                  <tr key={u.id} className="group hover:bg-sand/40 transition-colors duration-150">
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-maroon/10 text-maroon text-xs font-bold flex items-center justify-center shrink-0">
                           {initials(u)}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 max-w-[12rem]" title={u.full_name || undefined}>
                           <p className="font-semibold text-ink truncate">
                             {u.full_name || '—'}
                             {isSelf && (
@@ -253,9 +253,11 @@ export default function Users() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-ink-soft">{u.phone || '—'}</td>
-                    <td className="px-5 py-3.5 text-ink-soft truncate max-w-[200px]">{u.email || '—'}</td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3.5 text-ink-soft whitespace-nowrap">{u.phone || '—'}</td>
+                    <td className="px-5 py-3.5 text-ink-soft" title={u.email || undefined}>
+                      <span className="block max-w-[14rem] truncate">{u.email || '—'}</span>
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap">
                       <p className="font-semibold tabular-nums text-ink">{formatMoney(u.wallet_balance)}</p>
                       <button
                         type="button"
@@ -265,10 +267,10 @@ export default function Users() {
                         Credit wallet
                       </button>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3.5 whitespace-nowrap">
                       <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>{u.role}</Badge>
                     </td>
-                    <td className="px-5 py-3.5 text-right">
+                    <ActionsCell className="text-right">
                       <RoleSelect
                         value={u.role === 'admin' ? 'admin' : 'customer'}
                         disabled={isSelf}
@@ -276,7 +278,7 @@ export default function Users() {
                         title={isSelf ? "You can't change your own role here" : undefined}
                         onChange={(role) => handleRoleChange(u, role)}
                       />
-                    </td>
+                    </ActionsCell>
                   </tr>
                 )
               })}

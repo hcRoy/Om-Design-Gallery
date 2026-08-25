@@ -55,7 +55,7 @@ export async function fetchSubcategories(categorySlug) {
 
 /**
  * filters: { categorySlug, subcategorySlug, format, minPrice, maxPrice, query }
- * All optional. `query` matches against name/description/tags.
+ * All optional. `query` matches name and the 6-digit design_id.
  */
 export async function fetchDesigns(filters = {}) {
   const { categorySlug, subcategorySlug, format, minPrice, maxPrice, query } = filters
@@ -83,7 +83,15 @@ export async function fetchDesigns(filters = {}) {
     if (format) q = q.eq('file_format', format)
     if (minPrice != null) q = q.gte('price', minPrice)
     if (maxPrice != null) q = q.lte('price', maxPrice)
-    if (query) q = q.ilike('name', `%${query}%`)
+    if (query) {
+      const term = query.trim()
+      // Escape commas/periods used by PostgREST .or() filter syntax
+      const safe = term.replace(/[,.()]/g, '')
+      if (safe) {
+        q = q.or(`name.ilike.%${safe}%,design_id.ilike.%${safe}%`)
+      }
+    }
+    q = q.order('created_at', { ascending: false })
     const { data, error } = await q
     if (error) return { designs: [], error: error.message }
     return { designs: data, error: null }
@@ -96,14 +104,16 @@ export async function fetchDesigns(filters = {}) {
   if (minPrice != null) results = results.filter((d) => d.price >= minPrice)
   if (maxPrice != null) results = results.filter((d) => d.price <= maxPrice)
   if (query) {
-    const q = query.toLowerCase()
+    const q = query.toLowerCase().trim()
     results = results.filter(
       (d) =>
         d.name.toLowerCase().includes(q) ||
+        String(d.design_id ?? '').includes(q) ||
         d.description?.toLowerCase().includes(q) ||
         d.tags?.some((t) => t.toLowerCase().includes(q)),
     )
   }
+  results = [...results].reverse()
   return { designs: results, error: null }
 }
 

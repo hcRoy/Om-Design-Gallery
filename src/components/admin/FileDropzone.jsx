@@ -75,7 +75,7 @@ export default function FileDropzone({
               <img
                 src={previewUrl}
                 alt=""
-                className="w-14 h-14 rounded-lg object-cover bg-sand shrink-0 ring-1 ring-ink/10"
+                className="w-14 h-14 rounded-lg object-contain bg-sand shrink-0 ring-1 ring-ink/10 p-0.5"
               />
             ) : (
               <div className="w-14 h-14 rounded-lg bg-sand text-maroon flex items-center justify-center shrink-0">

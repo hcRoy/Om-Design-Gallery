@@ -21,14 +21,14 @@ export default function Card({
 
   const content = (
     <>
-      <div className="relative aspect-[4/5] bg-ivory overflow-hidden">
+      <div className="relative aspect-[4/5] bg-sand overflow-hidden">
         {image ? (
           <img
             src={image}
             alt={imageAlt}
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="img-design transition-transform duration-500 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center px-6">

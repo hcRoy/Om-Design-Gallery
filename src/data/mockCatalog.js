@@ -98,6 +98,7 @@ export const mockSubcategories = [
 export const mockDesigns = [
   {
     id: 'des-1',
+    design_id: '100101',
     name: 'Zarina Pallu Border',
     slug: 'zarina-pallu-border',
     description:
@@ -121,6 +122,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-2',
+    design_id: '100102',
     name: 'Kanjeevaram Edge',
     slug: 'kanjeevaram-edge',
     description:
@@ -144,6 +146,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-3',
+    design_id: '100103',
     name: 'Champa Bloom Motif',
     slug: 'champa-bloom-motif',
     description:
@@ -167,6 +170,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-4',
+    design_id: '100104',
     name: 'Gulmohar Trail',
     slug: 'gulmohar-trail',
     description:
@@ -190,6 +194,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-5',
+    design_id: '100105',
     name: 'Chevron Jaal Repeat',
     slug: 'chevron-jaal-repeat',
     description:
@@ -213,6 +218,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-6',
+    design_id: '100106',
     name: 'Diamond Trellis Jaal',
     slug: 'diamond-trellis-jaal',
     description:
@@ -236,6 +242,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-7',
+    design_id: '100107',
     name: 'Scatter Booti — Small',
     slug: 'scatter-booti-small',
     description:
@@ -259,6 +266,7 @@ export const mockDesigns = [
   },
   {
     id: 'des-8',
+    design_id: '100108',
     name: 'Marigold Booti',
     slug: 'marigold-booti',
     description:

@@ -1,6 +1,20 @@
 import Tooltip from './Tooltip.jsx'
 import { IconPencil, IconTrash } from './icons.jsx'
 
+const STICKY_ACTIONS =
+  'sticky right-0 z-10 bg-white group-hover:bg-sand/40 transition-colors duration-150 shadow-[-12px_0_16px_-14px_rgba(26,20,18,0.18)]'
+const STICKY_ACTIONS_HEAD =
+  'sticky right-0 z-20 bg-sand/50 shadow-[-12px_0_16px_-14px_rgba(26,20,18,0.12)]'
+
+function isActionsColumn(col) {
+  return col.sticky === 'right' || col.key === 'actions'
+}
+
+/**
+ * Admin data table with natural column sizing.
+ * Mark a column with key "actions" (or sticky: "right") to pin it while
+ * the rest of the table scrolls horizontally — no table-fixed distortion.
+ */
 export function AdminTable({ columns, children, minWidth = 720 }) {
   return (
     <div className="admin-card overflow-hidden">
@@ -12,9 +26,9 @@ export function AdminTable({ columns, children, minWidth = 720 }) {
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-5 py-3 text-[11px] font-semibold tracking-wider uppercase text-ink-soft ${
+                  className={`px-5 py-3 text-[11px] font-semibold tracking-wider uppercase text-ink-soft whitespace-nowrap ${
                     col.align === 'right' ? 'text-right' : ''
-                  } ${col.className ?? ''}`}
+                  } ${isActionsColumn(col) ? STICKY_ACTIONS_HEAD : ''} ${col.className ?? ''}`}
                 >
                   {col.label}
                 </th>
@@ -26,6 +40,11 @@ export function AdminTable({ columns, children, minWidth = 720 }) {
       </div>
     </div>
   )
+}
+
+/** Pin edit/delete (or Access) to the right edge while other columns scroll. */
+export function ActionsCell({ children, className = '' }) {
+  return <td className={`px-5 py-3.5 ${STICKY_ACTIONS} ${className}`}>{children}</td>
 }
 
 export function RowActions({ onEdit, onDelete, editLabel = 'Edit', deleteLabel = 'Delete' }) {

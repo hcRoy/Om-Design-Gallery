@@ -202,6 +202,14 @@
   .page-hero-gradient {
     background: linear-gradient(105deg, #4A1418 0%, #6B1E23 48%, #123B37 100%);
   }
+
+  /*
+   * Design / product artwork: show the full stitch preview without cropping.
+   * Pair with a sand/ivory frame so letterboxing looks intentional.
+   */
+  .img-design {
+    @apply w-full h-full object-contain object-center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,22 +15,24 @@ const AuthContext = createContext(null);
  * all, distinct from `loading`/`session`. Pages use it to show an
  * honest "auth isn't connected yet" state instead of silently failing
  * or looking broken.
+ *
+ * Important: `loading` is initial bootstrap only. Background token
+ * refreshes (common when returning to a browser tab) must NOT flip
+ * loading — that used to unmount AdminRoute and close open modals.
  */
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true); // initial bootstrap only
-  const [profileLoading, setProfileLoading] = useState(false); // any (re)fetch, incl. post-login
+  const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
       return;
     }
-    setProfileLoading(true);
     const { profile: p } = await fetchProfile(userId);
     setProfile(p);
-    setProfileLoading(false);
+    return p;
   }, []);
 
   useEffect(() => {
@@ -41,25 +43,33 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      // JUDGMENT CALL (bugfix): this used to call loadProfile without
-      // awaiting it, then immediately set loading to false. That let
-      // AdminRoute/ProtectedRoute render — and check profile.role —
-      // before the profile query had actually returned, so a real admin
-      // could get bounced to "/" on a fresh page load simply because
-      // their role hadn't loaded yet. Awaiting here closes that gap.
       await loadProfile(data.session?.user?.id);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
         setSession(newSession);
-        // Not awaited here (an event handler can't block the SDK), so
-        // `profileLoading` — exposed below as part of the combined
-        // `loading` value — is what covers this window instead: it
-        // catches the same race right after login/logout, when a route
-        // guard might otherwise check `profile` before this resolves.
-        loadProfile(newSession?.user?.id);
+
+        // Tab focus often triggers TOKEN_REFRESHED. Session JWT changed;
+        // profile/role did not. Reloading profile here used to flip a
+        // loading flag that unmounted admin pages and closed modals.
+        if (event === "TOKEN_REFRESHED") {
+          return;
+        }
+
+        if (event === "SIGNED_OUT") {
+          setProfile(null);
+          return;
+        }
+
+        // SIGNED_IN / USER_UPDATED / INITIAL_SESSION — refresh profile
+        // in the background without gating the whole app on loading.
+        if (newSession?.user?.id) {
+          loadProfile(newSession.user.id);
+        } else {
+          setProfile(null);
+        }
       },
     );
 
@@ -81,11 +91,7 @@ export function AuthProvider({ children }) {
         session,
         user: session?.user ?? null,
         profile,
-        // Combined so every consumer (ProtectedRoute, AdminRoute, pages
-        // reading `profile` directly) waits out both the initial
-        // bootstrap AND any later profile refetch — e.g. right after
-        // login, before role-gated routing decisions are made.
-        loading: loading || profileLoading,
+        loading,
         signOut,
         refreshProfile,
       }}

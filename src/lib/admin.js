@@ -300,13 +300,17 @@ export async function fetchAllDesigns() {
 
 export async function createDesign(payload) {
   if (!supabase) return { design: null, error: NOT_CONFIGURED_ERROR }
-  const { data, error } = await supabase.from('designs').insert(payload).select().single()
+  // design_id is assigned by a DB trigger — never send it from the client
+  const { design_id: _omit, ...safe } = payload
+  const { data, error } = await supabase.from('designs').insert(safe).select().single()
   return { design: data ?? null, error: error?.message ?? null }
 }
 
 export async function updateDesign(id, payload) {
   if (!supabase) return { design: null, error: NOT_CONFIGURED_ERROR }
-  const { data, error } = await supabase.from('designs').update(payload).eq('id', id).select().single()
+  // design_id is immutable; strip it so updates cannot attempt a change
+  const { design_id: _omit, ...safe } = payload
+  const { data, error } = await supabase.from('designs').update(safe).eq('id', id).select().single()
   return { design: data ?? null, error: error?.message ?? null }
 }
 
