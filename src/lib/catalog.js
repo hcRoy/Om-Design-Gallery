@@ -63,19 +63,19 @@ export async function fetchDesigns(filters = {}) {
   if (supabase) {
     let q = supabase
       .from('designs')
-      .select('*, categories(slug, name), subcategories(slug, name)')
+      .select('*, categories(slug, name), subcategories(slug, name), design_types(name)')
       .eq('is_active', true)
 
     if (subcategorySlug) {
       q = supabase
         .from('designs')
-        .select('*, categories(slug, name), subcategories!inner(slug, name)')
+        .select('*, categories(slug, name), subcategories!inner(slug, name), design_types(name)')
         .eq('is_active', true)
         .eq('subcategories.slug', subcategorySlug)
     } else if (categorySlug) {
       q = supabase
         .from('designs')
-        .select('*, categories!inner(slug, name), subcategories(slug, name)')
+        .select('*, categories!inner(slug, name), subcategories(slug, name), design_types(name)')
         .eq('is_active', true)
         .eq('categories.slug', categorySlug)
     }
@@ -121,7 +121,7 @@ export async function fetchDesignBySlug(slug) {
   if (supabase) {
     const { data, error } = await supabase
       .from('designs')
-      .select('*, categories(name, slug), subcategories(name, slug, category_id)')
+      .select('*, categories(name, slug), subcategories(name, slug, category_id), design_types(name)')
       .eq('slug', slug)
       .eq('is_active', true)
       .single()
@@ -137,6 +137,7 @@ export async function fetchDesignBySlug(slug) {
       ...raw,
       categories: cat ? { name: cat.name, slug: cat.slug } : null,
       subcategories: sub ? { name: sub.name, slug: sub.slug, category_id: sub.category_id } : null,
+      design_types: raw.design_type_name ? { name: raw.design_type_name } : null,
     },
     error: null,
   }

@@ -222,6 +222,36 @@ export async function deleteSubcategory(id) {
   return { error: error?.message ?? null }
 }
 
+// ---------- Design types ----------
+
+export async function fetchAllDesignTypes() {
+  if (!supabase) return { designTypes: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('design_types')
+    .select('*')
+    .order('name', { ascending: true })
+  if (error) return { designTypes: [], error: error.message }
+  return { designTypes: data ?? [], error: null }
+}
+
+export async function createDesignType(payload) {
+  if (!supabase) return { designType: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('design_types').insert(payload).select().single()
+  return { designType: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateDesignType(id, payload) {
+  if (!supabase) return { designType: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.from('design_types').update(payload).eq('id', id).select().single()
+  return { designType: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteDesignType(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('design_types').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
 // ---------- Carousel slides ----------
 
 export async function fetchAllCarouselSlides() {
@@ -292,7 +322,7 @@ export async function fetchAllDesigns() {
   if (!supabase) return { designs: [], error: NOT_CONFIGURED_ERROR }
   const { data, error } = await supabase
     .from('designs')
-    .select('*, categories(name), subcategories(name, slug, category_id)')
+    .select('*, categories(name), subcategories(name, slug, category_id), design_types(id, name, is_active)')
     .order('created_at', { ascending: false })
   if (error) return { designs: [], error: error.message }
   return { designs: data, error: null }

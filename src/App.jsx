@@ -28,6 +28,7 @@ const AdminUsers = lazy(() => import('./pages/admin/Users.jsx'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders.jsx'))
 const AdminOffers = lazy(() => import('./pages/admin/Offers.jsx'))
 const AdminSubcategories = lazy(() => import('./pages/admin/Subcategories.jsx'))
+const AdminDesignTypes = lazy(() => import('./pages/admin/DesignTypes.jsx'))
 const AdminCarousel = lazy(() => import('./pages/admin/CarouselSlides.jsx'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail.jsx'))
 
@@ -97,6 +98,7 @@ export default function App() {
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="categories" element={<AdminCategories />} />
                   <Route path="subcategories" element={<AdminSubcategories />} />
+                  <Route path="design-types" element={<AdminDesignTypes />} />
                   <Route path="carousel" element={<AdminCarousel />} />
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="orders" element={<AdminOrders />} />

@@ -11,6 +11,7 @@ import { callEdgeFunction, loadRazorpayCheckoutScript } from '../lib/razorpay.js
 
 const specRows = (design) => [
   ['Design ID', design.design_id],
+  ['Design type', design.design_types?.name],
   ['File format', design.file_format],
   ['Area', design.area],
   ['Needle', design.needle],

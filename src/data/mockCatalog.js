@@ -99,6 +99,7 @@ export const mockDesigns = [
   {
     id: 'des-1',
     design_id: '100101',
+    design_type_name: 'Border',
     name: 'Zarina Pallu Border',
     slug: 'zarina-pallu-border',
     description:
@@ -147,6 +148,7 @@ export const mockDesigns = [
   {
     id: 'des-3',
     design_id: '100103',
+    design_type_name: 'Motif',
     name: 'Champa Bloom Motif',
     slug: 'champa-bloom-motif',
     description:

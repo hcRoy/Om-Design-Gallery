@@ -190,6 +190,17 @@ export function IconLayers(props) {
   )
 }
 
+export function IconShapes(props) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <circle cx="17.5" cy="6.5" r="3.5" />
+      <path d="M8.5 20.5 3.5 14h10z" />
+      <rect x="14" y="13" width="7" height="8" rx="1.5" />
+    </Svg>
+  )
+}
+
 export function IconTag(props) {
   return (
     <Svg {...props}>

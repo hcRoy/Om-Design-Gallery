@@ -8,6 +8,7 @@ import { fetchCategories, FILE_FORMATS } from "../../lib/catalog.js";
 import {
   fetchAllDesigns,
   fetchAllSubcategories,
+  fetchAllDesignTypes,
   createDesign,
   updateDesign,
   deleteDesign,
@@ -49,6 +50,7 @@ const emptyForm = {
   price: "",
   category_id: "",
   subcategory_id: "",
+  design_type_id: "",
   file_format: FILE_FORMATS[0],
   area: "",
   needle: "",
@@ -81,6 +83,7 @@ export default function Products() {
   const [designs, setDesigns] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
+  const [designTypes, setDesignTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -123,12 +126,19 @@ export default function Products() {
     load();
     fetchCategories().then(({ categories: c }) => setCategories(c));
     fetchAllSubcategories().then(({ subcategories: s }) => setSubcategories(s));
+    fetchAllDesignTypes().then(({ designTypes: t }) => setDesignTypes(t));
   }, []);
 
   const subcatsForCategory = useMemo(
     () => subcategories.filter((s) => s.category_id === form.category_id),
     [subcategories, form.category_id],
   );
+
+  // Active types for new selection; keep the currently chosen type even if inactive
+  const designTypeOptions = useMemo(() => {
+    const selectedId = form.design_type_id;
+    return designTypes.filter((t) => t.is_active || t.id === selectedId);
+  }, [designTypes, form.design_type_id]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -142,6 +152,7 @@ export default function Products() {
         d.slug,
         d.categories?.name,
         d.subcategories?.name,
+        d.design_types?.name,
         d.file_format,
         ...(d.tags ?? []),
       ]
@@ -161,6 +172,7 @@ export default function Products() {
         price: d.price ?? "",
         category_id: d.category_id ?? "",
         subcategory_id: d.subcategory_id ?? "",
+        design_type_id: d.design_type_id ?? "",
         file_format: d.file_format ?? FILE_FORMATS[0],
         area: d.area ?? "",
         needle: d.needle ?? "",
@@ -259,6 +271,7 @@ export default function Products() {
       price: Number(form.price) || 0,
       category_id: form.category_id || null,
       subcategory_id: form.subcategory_id || null,
+      design_type_id: form.design_type_id || null,
       file_format: form.file_format,
       area: form.area.trim() || null,
       needle: form.needle.trim() || null,
@@ -604,43 +617,7 @@ export default function Products() {
           </FormSection>
 
           <FormSection title="Pricing & organisation">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Field
-                label="Price (₹)"
-                htmlFor="product-price"
-                error={fieldErrors.price}
-              >
-                <input
-                  id="product-price"
-                  type="number"
-                  min="0"
-                  value={form.price}
-                  onChange={(e) => {
-                    setForm((f) => ({ ...f, price: e.target.value }));
-                    if (fieldErrors.price)
-                      setFieldErrors((err) => ({ ...err, price: undefined }));
-                  }}
-                  className="admin-input"
-                />
-              </Field>
-              <Field label="Format" htmlFor="product-format">
-                <select
-                  id="product-format"
-                  value={form.file_format}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, file_format: e.target.value }))
-                  }
-                  className="admin-select"
-                >
-                  {FILE_FORMATS.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-1 gap-4">
               <Field label="Category" htmlFor="product-category">
                 <select
                   id="product-category"
@@ -677,7 +654,65 @@ export default function Products() {
                 </select>
               </Field>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <Field
+              label="Design type"
+              htmlFor="product-design-type"
+              hint="Optional. Inactive types stay available if already assigned."
+            >
+              <select
+                id="product-design-type"
+                value={form.design_type_id}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, design_type_id: e.target.value }))
+                }
+                className="admin-select"
+              >
+                <option value="">None</option>
+                {designTypeOptions.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {!t.is_active ? " (inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="grid sm:grid-cols-1 gap-4">
+              <Field
+                label="Price (₹)"
+                htmlFor="product-price"
+                error={fieldErrors.price}
+              >
+                <input
+                  id="product-price"
+                  type="number"
+                  min="0"
+                  value={form.price}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, price: e.target.value }));
+                    if (fieldErrors.price)
+                      setFieldErrors((err) => ({ ...err, price: undefined }));
+                  }}
+                  className="admin-input"
+                />
+              </Field>
+              <Field label="Format" htmlFor="product-format">
+                <select
+                  id="product-format"
+                  value={form.file_format}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, file_format: e.target.value }))
+                  }
+                  className="admin-select"
+                >
+                  {FILE_FORMATS.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="grid sm:grid-cols-1 gap-4">
               <Field label="Area" htmlFor="product-area">
                 <input
                   id="product-area"
