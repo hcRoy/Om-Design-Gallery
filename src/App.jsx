@@ -28,9 +28,12 @@ const AdminUsers = lazy(() => import('./pages/admin/Users.jsx'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders.jsx'))
 const AdminOffers = lazy(() => import('./pages/admin/Offers.jsx'))
 const AdminSubcategories = lazy(() => import('./pages/admin/Subcategories.jsx'))
+const AdminAdmissions = lazy(() => import('./pages/admin/Admissions.jsx'))
+const AdminAdmissionDetail = lazy(() => import('./pages/admin/AdmissionDetail.jsx'))
 const AdminDesignTypes = lazy(() => import('./pages/admin/DesignTypes.jsx'))
 const AdminCarousel = lazy(() => import('./pages/admin/CarouselSlides.jsx'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail.jsx'))
+const Apply = lazy(() => import('./pages/Apply.jsx'))
 
 function PageLoader() {
   return (
@@ -65,6 +68,7 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/apply" element={<Apply />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/categories/:slug" element={<CategoryDetail />} />
@@ -98,6 +102,8 @@ export default function App() {
                   <Route path="products" element={<AdminProducts />} />
                   <Route path="categories" element={<AdminCategories />} />
                   <Route path="subcategories" element={<AdminSubcategories />} />
+                  <Route path="admissions" element={<AdminAdmissions />} />
+                  <Route path="admissions/:id" element={<AdminAdmissionDetail />} />
                   <Route path="design-types" element={<AdminDesignTypes />} />
                   <Route path="carousel" element={<AdminCarousel />} />
                   <Route path="users" element={<AdminUsers />} />

@@ -7,7 +7,9 @@ const variants = {
   format: 'bg-ivory text-ink ring-ink/10',
   paid: 'bg-teal/10 text-teal ring-teal/15',
   pending: 'bg-gold-light/50 text-gold-dark ring-gold/25',
-  failed: 'bg-maroon/10 text-maroon ring-maroon/15',
+  enrolled: 'bg-teal/10 text-teal ring-teal/15',
+  rejected: 'bg-maroon/10 text-maroon ring-maroon/15',
+  reviewed: 'bg-blue-100 text-blue-800 ring-blue-200/50',
 }
 
 export default function Badge({ children, variant = 'draft', className = '' }) {

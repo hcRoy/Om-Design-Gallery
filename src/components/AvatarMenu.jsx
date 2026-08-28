@@ -35,7 +35,7 @@ export default function AvatarMenu() {
     <div className="relative flex items-center gap-2" ref={ref}>
       <Link
         to="/account"
-        className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5
+        className="hidden sm:inline-flex xl:inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5
                    text-xs font-semibold text-ink hover:border-maroon/25 transition-colors duration-150"
         title="Wallet balance"
       >

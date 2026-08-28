@@ -8,7 +8,8 @@ import BrandMark from './BrandMark.jsx'
 const links = [
   { to: '/', label: 'Home', end: true },
   { to: '/categories', label: 'Categories' },
-  { to: '/designs', label: 'All Designs' },
+  { to: '/designs', label: 'All Designs', shortLabel: 'Designs' },
+  { to: '/apply', label: 'Apply for Classes', shortLabel: 'Apply' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
 ]
@@ -26,27 +27,38 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-ivory/95 backdrop-blur border-b border-ink/10">
-      <nav className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-[1fr_auto_1fr] items-center px-6 h-20 gap-4">
-        <BrandMark onClick={() => setOpen(false)} />
-
-        <div className="hidden lg:flex items-center gap-8">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.end}
-              className={({ isActive }) =>
-                `text-sm font-semibold tracking-wide transition-colors duration-150 ${
-                  isActive ? 'text-maroon' : 'text-ink-soft hover:text-maroon'
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+      <nav className="max-w-6xl mx-auto flex items-center justify-between gap-3 lg:gap-4 px-4 sm:px-6 h-20 min-w-0">
+        <div className="shrink-0 min-w-0">
+          <BrandMark onClick={() => setOpen(false)} />
         </div>
 
-        <div className="justify-self-end flex items-center gap-3">
+        <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-1 xl:px-3">
+          <div className="flex items-center gap-4 xl:gap-6">
+            {links.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) =>
+                  `text-sm font-semibold tracking-wide whitespace-nowrap transition-colors duration-150 ${
+                    isActive ? 'text-maroon' : 'text-ink-soft hover:text-maroon'
+                  }`
+                }
+              >
+                {link.shortLabel ? (
+                  <>
+                    <span className="lg:inline xl:hidden">{link.shortLabel}</span>
+                    <span className="hidden xl:inline">{link.label}</span>
+                  </>
+                ) : (
+                  link.label
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+
+        <div className="shrink-0 flex items-center gap-2 sm:gap-3">
           {!loading && session && <AvatarMenu />}
           {!loading && !session && (
             <button

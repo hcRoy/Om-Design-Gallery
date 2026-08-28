@@ -11,6 +11,7 @@ import {
   IconLayers,
   IconShapes,
   IconImage,
+  IconFile,
   IconUsers,
   IconOrders,
   IconTag,
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/admin/products', label: 'Products', icon: IconPackage },
   { to: '/admin/categories', label: 'Categories', icon: IconFolder },
   { to: '/admin/subcategories', label: 'Subcategories', icon: IconLayers },
+  { to: '/admin/admissions', label: 'Admissions', icon: IconFile },
   { to: '/admin/design-types', label: 'Design Types', icon: IconShapes },
   { to: '/admin/offers', label: 'Offers', icon: IconTag },
   { to: '/admin/carousel', label: 'Carousel', icon: IconImage },
@@ -60,8 +62,8 @@ function NavList({ onNavigate }) {
   )
 }
 
-function Brand() {
-  return <BrandMark compact subtitle="Admin" />
+function Brand({ stacked = false }) {
+  return <BrandMark compact subtitle="Admin" stacked={stacked} />
 }
 
 function SidebarFooter() {
@@ -113,9 +115,9 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-sand flex">
       <Seo title="Admin" noIndex />
 
-      <aside className="hidden lg:flex w-[240px] shrink-0 sticky top-0 h-screen flex-col bg-ivory border-r border-ink/8 px-4 py-6">
-        <div className="px-2 mb-8">
-          <Brand />
+      <aside className="hidden lg:flex w-[252px] shrink-0 sticky top-0 h-screen flex-col bg-ivory border-r border-ink/8 px-4 py-6">
+        <div className="mb-8 min-w-0 max-w-full pr-1">
+          <Brand stacked />
         </div>
         <NavList />
         <SidebarFooter />
@@ -158,8 +160,8 @@ export default function AdminLayout() {
                 transition={{ duration: 0.2 }}
                 className="relative w-[min(280px,86vw)] h-full bg-ivory border-r border-ink/8 px-4 py-6 flex flex-col"
               >
-                <div className="flex items-start justify-between px-2 mb-8">
-                  <Brand />
+                <div className="flex items-start justify-between gap-3 mb-8 min-w-0">
+                  <Brand stacked />
                   <button
                     type="button"
                     aria-label="Close menu"

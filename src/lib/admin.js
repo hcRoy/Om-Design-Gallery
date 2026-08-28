@@ -374,6 +374,88 @@ export async function uploadDesignFile(file) {
   return { path, error: null }
 }
 
+// ---------- Admissions ----------
+
+export async function fetchAllAdmissions() {
+  if (!supabase) return { admissions: [], error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('admissions')
+    .select('*')
+    .order('submitted_at', { ascending: false })
+  if (error) return { admissions: [], error: error.message }
+  return { admissions: data ?? [], error: null }
+}
+
+export async function fetchAdmissionById(id) {
+  if (!supabase) return { admission: null, installments: [], error: NOT_CONFIGURED_ERROR }
+  const { data: admission, error: admErr } = await supabase
+    .from('admissions')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (admErr) return { admission: null, installments: [], error: admErr.message }
+  const { data: installments, error: instErr } = await supabase
+    .from('admission_fee_installments')
+    .select('*')
+    .eq('admission_id', id)
+    .order('sort_order', { ascending: true })
+  if (instErr) return { admission: null, installments: [], error: instErr.message }
+  return { admission, installments: installments ?? [], error: null }
+}
+
+export async function updateAdmission(id, payload) {
+  if (!supabase) return { admission: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('admissions')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single()
+  return { admission: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteAdmission(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('admissions').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+export async function createAdmissionInstallment(admissionId, payload) {
+  if (!supabase) return { installment: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('admission_fee_installments')
+    .insert({ ...payload, admission_id: admissionId })
+    .select()
+    .single()
+  return { installment: data ?? null, error: error?.message ?? null }
+}
+
+export async function updateAdmissionInstallment(id, payload) {
+  if (!supabase) return { installment: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase
+    .from('admission_fee_installments')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single()
+  return { installment: data ?? null, error: error?.message ?? null }
+}
+
+export async function deleteAdmissionInstallment(id) {
+  if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  const { error } = await supabase.from('admission_fee_installments').delete().eq('id', id)
+  return { error: error?.message ?? null }
+}
+
+export async function getAdmissionAssetSignedUrl(path, expiresIn = 3600) {
+  if (!supabase || !path) return { url: null, error: NOT_CONFIGURED_ERROR }
+  const { data, error } = await supabase.storage
+    .from('admission-photos')
+    .createSignedUrl(path, expiresIn)
+  if (error) return { url: null, error: error.message }
+  return { url: data?.signedUrl ?? null, error: null }
+}
+
 // ---------- Users ----------
 
 export async function fetchUsers() {
