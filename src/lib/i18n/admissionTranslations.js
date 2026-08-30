@@ -1,4 +1,4 @@
-/** Bilingual strings for the public /apply form and print document. */
+/** Bilingual strings for the admin admission form and PDF document. */
 
 export const ADMISSION_COMPANY = {
   name: 'OM Design & Classes',
@@ -43,9 +43,9 @@ export const stampText = {
 
 export const formCopy = {
   en: {
-    pageTitle: 'Apply for Classes',
+    pageTitle: 'New admission',
     pageDescription:
-      'Submit your admission details online. Our office will contact you after review.',
+      'Enter student details for in-office enrollment. After saving, download the PDF from the admission record.',
     languageLabel: 'Language',
     studentName: "Student's Name",
     studentMobile: "Student's Mobile No.",
@@ -81,8 +81,8 @@ export const formCopy = {
     signatureClear: 'Clear signature',
     rulesHeading: 'Rules & conditions',
     agreeLabel: 'I agree to and accept all of the above terms and conditions.',
-    submit: 'Submit application',
-    submitting: 'Submitting…',
+    submit: 'Save admission',
+    submitting: 'Saving…',
     successTitle: 'Application received',
     successBody:
       'Thank you. Your form has been submitted. Please save your form number and visit the office when contacted.',
@@ -104,33 +104,34 @@ export const formCopy = {
     print: {
       admissionForm: 'Admission Form',
       formNo: 'Form No',
-      feeDetails: "Student's Fee Details:",
+      feeDetails: "Student's Fee Details :-",
       date: 'Date',
       total: 'Total',
       installmentAmount: 'Installment Amount',
-      installmentReceived: 'Installment Received Signature',
-      studentSignature: "Student's Signature",
+      installmentReceived: "Receiver's Signature",
+      studentSignature: "Student's Signature :-",
       administratorSignature: "Administrator's Signature",
       rulesTitle: ':: RULES ::',
       feeWarning:
-        'Fees will not be refunded under any circumstances. Read the rules carefully before filling out the form.',
-      studentCopyName: "Student's Name:",
-      studentCopyTime: "Student's Class/Batch Time:",
+        'Fees will not be refunded under any circumstances. Read the rules carefully before filling out the form....',
+      studentCopyName: "Student's Name :-",
+      studentCopyTime: "Student's Class Time :-",
       to: 'to',
       photo: 'Photo',
     },
   },
   gu: {
-    pageTitle: 'ક્લાસ માટે અરજી',
+    pageTitle: 'નવું એડમિશન',
     pageDescription:
-      'ઓનલાઇન એડમિશન ફોર્મ ભરો. સમીક્ષા પછી ઓફિસ તમારો સંપર્ક કરશે.',
+      'ઓફિસમાં એનરોલમેન્ટ માટે વિદ્યાર્થીની વિગત ભરો. સેવ પછી એડમિશન રેકોર્ડમાંથી PDF ડાઉનલોડ કરો.',
     languageLabel: 'ભાષા',
-    studentName: 'વિદ્યાર્થીનું નામ:',
-    studentMobile: 'વિદ્યાર્થીનો મોબાઇલ નં.:',
-    currentAddress: 'વિદ્યાર્થીનું હાલનું સરનામું:',
-    permanentAddress: 'વિદ્યાર્થીનું કાયમી સરનામું:',
-    referenceDetails: 'અહીં કામ કરતા સગા / રેફરન્સની વિગત:',
-    classTime: 'વિદ્યાર્થીની ક્લાસ/બેચ સમય:',
+    studentName: 'વિદ્યાર્થી નું નામ :-',
+    studentMobile: 'વિદ્યાર્થીનો મો.નં. :-',
+    currentAddress: 'વિદ્યાર્થીનું હાલનું સરનામું :-',
+    permanentAddress: 'વિદ્યાર્થીના વતનનું સરનામું :-',
+    referenceDetails:
+      'અહીં કામ કરતા સગા ની વિગત અથવા કોણે રેફરન્સ આપીને મોકલાવેલ છે તેની વિગત :-',
+    classTime: 'વિદ્યાર્થીનો શીખવા આવવાનો સમય :-',
     classTimeFrom: 'શરૂ',
     classTimeTo: 'અંત',
     photoLabel: 'વિદ્યાર્થીનો ફોટો',
@@ -159,8 +160,8 @@ export const formCopy = {
     signatureClear: 'સહી સાફ કરો',
     rulesHeading: 'નિયમો અને શરતો',
     agreeLabel: 'ઉપરોક્ત તમામ શરતો મને મંજૂર છે.',
-    submit: 'અરજી મોકલો',
-    submitting: 'મોકલી રહ્યા છીએ…',
+    submit: 'એડમિશન સેવ કરો',
+    submitting: 'સેવ થઈ રહ્યું છે…',
     successTitle: 'અરજી પ્રાપ્ત થઈ',
     successBody:
       'આભાર. તમારું ફોર્મ સબમિટ થયું છે. ફોર્મ નંબર સાચવો અને ઓફિસનો સંપર્ક થયા પછી મુલાકાત લો.',
@@ -180,22 +181,22 @@ export const formCopy = {
       classEnd: 'ક્લાસ અંત સમય દાખલ કરો',
     },
     print: {
-      admissionForm: 'એડમિશન ફોર્મ',
-      formNo: 'ફોર્મ નં',
-      feeDetails: 'વિદ્યાર્થીની ફી વિગત:',
+      admissionForm: 'પ્રવેશ પત્ર',
+      formNo: 'Form No',
+      feeDetails: 'વિદ્યાર્થીની ફીની વિગત :-',
       date: 'તારીખ',
       total: 'કુલ',
       installmentAmount: 'હપ્તાની રકમ',
-      installmentReceived: 'હપ્તા પ્રાપ્ત સહી',
-      studentSignature: 'વિદ્યાર્થીની સહી',
-      administratorSignature: 'એડમિનિસ્ટ્રેટરની સહી',
+      installmentReceived: 'હપ્તો લેનારની સહી',
+      studentSignature: 'વિદ્યાર્થીની સહી :-',
+      administratorSignature: 'સંચાલકશ્રીની સહી',
       rulesTitle: ':: નિયમો ::',
       feeWarning:
-        'કોઈ પણ સંજોગોમાં ફી પાછી આપવામાં આવશે નહીં. ફોર્મ ભરતા પહેલા નિયમો વાંચો.',
-      studentCopyName: 'વિદ્યાર્થીનું નામ:',
-      studentCopyTime: 'વિદ્યાર્થીની ક્લાસ/બેચ સમય:',
+        'કોઈ પણ સંજોગો માં ફી પાછી આપવામાં આવશે નઈ નિયમો વાંચી પછી જ ફોર્મ ભરવું....',
+      studentCopyName: 'વિદ્યાર્થી નું નામ :-',
+      studentCopyTime: 'વિદ્યાર્થીનો શીખવા આવવાનો સમય :-',
       to: 'થી',
-      photo: 'ફોટો',
+      photo: 'Photo',
     },
   },
 }

@@ -1,13 +1,11 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import Section from "../components/Section.jsx";
-import PageHero from "../components/PageHero.jsx";
-import Seo from "../components/Seo.jsx";
-import SignaturePad from "../components/SignaturePad.jsx";
-import { useToast } from "../context/ToastContext.jsx";
-import { submitAdmissionApplication } from "../lib/admissions.js";
-import { formCopy, rules } from "../lib/i18n/admissionTranslations.js";
-import { STUDIO } from "../data/studio.js";
+import { Link, useNavigate } from "react-router-dom";
+import Seo from "../../components/Seo.jsx";
+import PageHeader from "../../components/admin/PageHeader.jsx";
+import SignaturePad from "../../components/SignaturePad.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
+import { createAdmission } from "../../lib/admin.js";
+import { formCopy, rules } from "../../lib/i18n/admissionTranslations.js";
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const MOBILE_RE = /^[6-9]\d{9}$/;
@@ -20,7 +18,6 @@ const emptyForm = {
   reference_details: "",
   class_start_time: "",
   class_end_time: "",
-  website: "",
 };
 
 const inputClass =
@@ -136,8 +133,9 @@ function LanguageToggle({ language, onChange, label }) {
   );
 }
 
-export default function Apply() {
+export default function AdmissionNew() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [language, setLanguage] = useState("gu");
   const [form, setForm] = useState(emptyForm);
   const [agreed, setAgreed] = useState(false);
@@ -146,7 +144,6 @@ export default function Apply() {
   const [signatureDataUrl, setSignatureDataUrl] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(null);
   const [photoDrag, setPhotoDrag] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -217,19 +214,17 @@ export default function Apply() {
 
     setSubmitting(true);
     const mobile = form.student_mobile.replace(/\D/g, "");
-    const { data, error } = await submitAdmissionApplication({
+    const { admission, error } = await createAdmission({
       student_name: form.student_name.trim(),
       student_mobile: mobile,
       student_photo: photoDataUrl,
       student_signature: signatureDataUrl,
       current_address: form.current_address.trim(),
       permanent_address: form.permanent_address.trim(),
-      reference_details: form.reference_details.trim(),
+      reference_details: form.reference_details.trim() || null,
       class_start_time: form.class_start_time.trim(),
       class_end_time: form.class_end_time.trim(),
       preferred_language: language,
-      agreed_to_terms: true,
-      website: form.website,
     });
     setSubmitting(false);
 
@@ -238,141 +233,36 @@ export default function Apply() {
       return;
     }
 
-    setSuccess({ form_number: data?.form_number });
+    showToast("Admission saved", { type: "success" });
+    navigate(`/admin/admissions/${admission.id}`, { state: { justCreated: true } });
   };
-
-  if (success) {
-    return (
-      <>
-        <Seo title={t.successTitle} description={t.successBody} />
-        <Section tone="ivory" className="py-16 md:py-24">
-          <div className="max-w-md mx-auto text-center">
-            <div
-              className="w-16 h-16 mx-auto mb-6 rounded-full bg-teal/15 text-teal flex items-center justify-center"
-              aria-hidden="true"
-            >
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-maroon mb-3">
-              {t.successTitle}
-            </h1>
-            <p className="text-sm text-ink-soft leading-relaxed mb-8">
-              {t.successBody}
-            </p>
-            <div className="bg-white rounded-2xl shadow-card border border-ink/8 p-8 mb-6">
-              {success.form_number != null && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-ink-soft mb-2">
-                    {t.formNumberLabel}
-                  </p>
-                  <p className="text-5xl font-bold text-maroon tabular-nums">
-                    {success.form_number}
-                  </p>
-                </div>
-              )}
-            </div>
-            <Link to="/" className="btn-primary inline-flex">
-              {t.backHome}
-            </Link>
-          </div>
-        </Section>
-      </>
-    );
-  }
 
   return (
     <>
-      <Seo title={t.pageTitle} description={t.pageDescription} />
-      <PageHero eyebrow="Classes" title={t.pageTitle}>
-        <p>{t.pageDescription}</p>
-      </PageHero>
+      <Seo title="New admission" noIndex />
+      <Link
+        to="/admin/admissions"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-ink-soft hover:text-maroon mb-4"
+      >
+        ← Admissions
+      </Link>
+      <PageHeader
+        title="New admission"
+        description="Fill in the student details, then download the PDF record from the admission page."
+      />
 
-      <Section tone="ivory" align="left">
-        <div className="max-w-6xl mx-auto w-full grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-8 lg:gap-10 items-start text-left">
-          {/* Sidebar */}
-          <aside className="lg:sticky lg:top-24 space-y-5">
-            <div className="rounded-2xl bg-maroon text-ivory p-6 shadow-card">
-              <p className="eyebrow text-gold-light mb-2">
-                Om Design & Classes
-              </p>
-              <h2 className="text-xl font-bold mb-4 text-ivory/90">
-                {t.sidebarTitle}
-              </h2>
-              <ol className="space-y-3 text-sm text-ivory/90 leading-relaxed">
-                {t.sidebarSteps.map((step, i) => (
-                  <li key={i} className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-ivory/15 text-xs font-bold flex items-center justify-center shrink-0">
-                      {i + 1}
-                    </span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+      <div className="max-w-3xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ink/8 bg-white px-5 py-4 shadow-sm text-left">
+          <p className="text-sm text-ink-soft font-medium">{t.pageDescription}</p>
+          <LanguageToggle
+            language={language}
+            onChange={setLanguage}
+            label={t.languageLabel}
+          />
+        </div>
 
-            <div className="rounded-2xl border border-ink/8 bg-white p-5 shadow-sm">
-              <p className="text-sm text-ink-soft leading-relaxed mb-4">
-                {t.sidebarContact}
-              </p>
-              <div className="space-y-2 text-sm">
-                <a
-                  href={`tel:${STUDIO.phoneTel}`}
-                  className="font-semibold text-maroon hover:underline block"
-                >
-                  {STUDIO.phoneDisplay}
-                </a>
-                <p className="text-ink-soft">
-                  {STUDIO.addressLines.join(", ")}
-                </p>
-                <Link
-                  to="/contact"
-                  className="text-sm font-semibold text-maroon hover:underline"
-                >
-                  Contact page →
-                </Link>
-              </div>
-            </div>
-          </aside>
-
-          {/* Form */}
-          <div className="space-y-5 w-full text-left">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ink/8 bg-white px-5 py-4 shadow-sm text-left">
-              <p className="text-sm text-ink-soft font-medium">
-                {t.pageDescription}
-              </p>
-              <LanguageToggle
-                language={language}
-                onChange={setLanguage}
-                label={t.languageLabel}
-              />
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5 w-full text-left" noValidate>
-              <p className="text-xs text-ink-soft">{t.requiredLegend}</p>
-              <input
-                type="text"
-                name="website"
-                value={form.website}
-                onChange={(e) => setField("website", e.target.value)}
-                tabIndex={-1}
-                autoComplete="off"
-                aria-hidden="true"
-                className="absolute -left-[9999px] w-1 h-1 opacity-0"
-              />
-
+        <form onSubmit={handleSubmit} className="space-y-5 w-full text-left" noValidate>
+          <p className="text-xs text-ink-soft">{t.requiredLegend}</p>
               <FormSection number={1} title={t.sectionPersonal}>
                 <div className="space-y-5">
                   <FormField
@@ -651,10 +541,8 @@ export default function Apply() {
                   {submitting ? t.submitting : t.submit}
                 </button>
               </FormSection>
-            </form>
-          </div>
-        </div>
-      </Section>
+        </form>
+      </div>
     </>
   );
 }

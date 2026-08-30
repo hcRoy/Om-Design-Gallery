@@ -7,6 +7,15 @@ import {
 import { LOGO_SRC } from '../../data/studio.js'
 import './admission-print.css'
 
+const GU_DIGITS = ['૦', '૧', '૨', '૩', '૪', '૫', '૬', '૭', '૮', '૯']
+
+function toGuNumber(n) {
+  return String(n)
+    .split('')
+    .map((d) => GU_DIGITS[Number(d)] ?? d)
+    .join('')
+}
+
 function formatDate(value) {
   if (!value) return ''
   const d = new Date(`${value}T00:00:00`)
@@ -69,23 +78,16 @@ function PrintPageHeader({ formNumber, address }) {
   return (
     <div className="print-header">
       <div className="company-header">
-        <div className="header-left">
-          <img src={LOGO_SRC} alt="" className="company-logo" />
+        <div className="header-left" aria-hidden="true">
+          <img src={LOGO_SRC} alt="" className="company-logo" crossOrigin="anonymous" />
         </div>
         <div className="header-content">
           <div className="company-name">{ADMISSION_COMPANY.name}</div>
           <div className="company-address">{address}</div>
-          <div className="company-mobile">
-            <span className="company-mobile-label">Mo.</span>
-            {ADMISSION_COMPANY.mobilePrint}
-          </div>
-          <div className="form-number-box">
-            <div className="form-number-label">
-              <span className="form-number-label-en">Form No</span>
-              <span className="form-number-label-gu">ફોર્મ નં</span>
-            </div>
-            <div className="form-number-value">{formNumber}</div>
-          </div>
+        </div>
+        <div className="form-number-box">
+          <div className="form-number-label">Form No</div>
+          <div className="form-number-value">{formNumber}</div>
         </div>
       </div>
       <div className="form-title-bar">
@@ -97,7 +99,9 @@ function PrintPageHeader({ formNumber, address }) {
 }
 
 /**
- * Two-page printable admission record — layout matches the physical paper form.
+ * Two-page admission PDF template — proportions match the physical paper form.
+ * Page 1: office form + tear-off student copy
+ * Page 2: rules + fee ledger + admin signature
  */
 export default function AdmissionPrintDocument({
   admission,
@@ -108,89 +112,104 @@ export default function AdmissionPrintDocument({
 }) {
   const lang = language === 'en' ? 'en' : 'gu'
   const t = formCopy[lang].print
+  const f = formCopy[lang]
   const ruleList = rules[lang]
   const address =
     lang === 'gu' ? ADMISSION_COMPANY.addressGu : ADMISSION_COMPANY.addressEn
   const formNumber = admission?.form_number ?? ''
-  const classTime =
-    admission?.class_start_time && admission?.class_end_time
-      ? `${admission.class_start_time} ${t.to} ${admission.class_end_time}`
-      : [admission?.class_start_time, admission?.class_end_time].filter(Boolean).join(' ')
+
+  const startParts = String(admission?.class_start_time ?? '').split(/[:\s]/).filter(Boolean)
+  const endParts = String(admission?.class_end_time ?? '').split(/[:\s]/).filter(Boolean)
 
   return (
     <div className="admission-print-root">
-      <div className="page">
+      {/* PAGE 1 — student details + student copy */}
+      <div className="page page-1">
         <PrintPageHeader formNumber={formNumber} address={address} />
 
         <div className="admission-container">
-          <div className="admission-background">
-            <img src={LOGO_SRC} alt="" />
+          <div className="admission-background" aria-hidden="true">
+            <img src={LOGO_SRC} alt="" crossOrigin="anonymous" />
           </div>
 
           <div className="photo-box">
             {photoUrl ? (
-              <img src={photoUrl} alt="" />
+              <img src={photoUrl} alt="" crossOrigin="anonymous" />
             ) : (
               <div className="photo-placeholder">{t.photo}</div>
             )}
           </div>
 
-          <div className="field-row student-name-row">
-            <div className="field-label">{formCopy[lang].studentName}</div>
-            <div className="field-line">{admission?.student_name ?? ''}</div>
-          </div>
+          <div className="admission-fields">
+            <div className="field-row student-name-row">
+              <div className="field-label">{f.studentName}</div>
+              <div className="field-line">{admission?.student_name ?? ''}</div>
+            </div>
 
-          <div className="field-row mobile-row">
-            <div className="field-label">{formCopy[lang].studentMobile}</div>
-            <div className="field-line">{admission?.student_mobile ?? ''}</div>
-          </div>
+            <div className="field-row mobile-row">
+              <div className="field-label">{f.studentMobile}</div>
+              <div className="field-line">{admission?.student_mobile ?? ''}</div>
+            </div>
 
-          <div className="field-row address-row">
-            <div className="field-label">{formCopy[lang].currentAddress}</div>
-            <div className="field-line">{admission?.current_address ?? ''}</div>
-          </div>
-          <div className="address-line" />
-
-          <div className="field-row address-row">
-            <div className="field-label">{formCopy[lang].permanentAddress}</div>
-            <div className="field-line">{admission?.permanent_address ?? ''}</div>
-          </div>
-          <div className="address-line" />
-
-          <div className="reference-row">
-            <div className="reference-description">{formCopy[lang].referenceDetails}</div>
-            <div className="reference-line">{admission?.reference_details ?? ''}</div>
-            <div className="reference-line" />
-          </div>
-
-          <div className="time-row">
-            <div className="field-label">{formCopy[lang].classTime}</div>
-            <div className="time-input">{admission?.class_start_time ?? ''}</div>
-            <div className="time-separator">{t.to}</div>
-            <div className="time-input">{admission?.class_end_time ?? ''}</div>
-          </div>
-
-          <div className="section-label">{t.feeDetails}</div>
-          <FeeTable installments={installments} labels={t} />
-
-          <div className="signature-row">
-            <div className="signature-field">
-              <div className="signature-line">
-                {signatureUrl ? <img src={signatureUrl} alt="" /> : null}
+            <div className="address-block">
+              <div className="field-row">
+                <div className="field-label">{f.currentAddress}</div>
+                <div className="field-line">{admission?.current_address ?? ''}</div>
               </div>
-              {t.studentSignature}
+              <div className="dotted-line" />
+            </div>
+
+            <div className="address-block">
+              <div className="field-row">
+                <div className="field-label">{f.permanentAddress}</div>
+                <div className="field-line">{admission?.permanent_address ?? ''}</div>
+              </div>
+              <div className="dotted-line" />
+            </div>
+
+            <div className="reference-row">
+              <div className="reference-description">{f.referenceDetails}</div>
+              <div className="reference-line">{admission?.reference_details ?? ''}</div>
+              <div className="dotted-line" />
+            </div>
+
+            <div className="time-row">
+              <div className="field-label">{f.classTime}</div>
+              <div className="time-input">{startParts[0] ?? ''}</div>
+              <span className="time-colon">:</span>
+              <div className="time-input">{startParts[1] ?? ''}</div>
+              <span className="time-separator">{t.to}</span>
+              <div className="time-input">{endParts[0] ?? ''}</div>
+              <span className="time-colon">:</span>
+              <div className="time-input">{endParts[1] ?? ''}</div>
+            </div>
+          </div>
+
+          <div className="admission-footer">
+            <div className="section-label">{t.feeDetails}</div>
+            <FeeTable installments={installments} labels={t} />
+
+            <div className="signature-row">
+              <div className="signature-field inline-label">
+                <span>{t.studentSignature}</span>
+                <div className="signature-line">
+                  {signatureUrl ? (
+                    <img src={signatureUrl} alt="" crossOrigin="anonymous" />
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="cut-line">
-          <span className="scissors">✂</span>
+          <span className="scissors" aria-hidden="true">✂</span>
         </div>
 
         <div className="student-copy">
           <div className="student-copy-header">
-            <div className="student-copy-logo-section">
-              <img src={LOGO_SRC} alt="" className="student-copy-logo" />
+            <div className="student-copy-logo-section" aria-hidden="true">
+              <img src={LOGO_SRC} alt="" className="student-copy-logo" crossOrigin="anonymous" />
             </div>
             <div className="student-copy-content">
               <div className="student-copy-company-name">{ADMISSION_COMPANY.name}</div>
@@ -198,10 +217,10 @@ export default function AdmissionPrintDocument({
               <div className="student-copy-mobile">
                 Mo. {ADMISSION_COMPANY.mobilePrint}
               </div>
-              <div className="student-copy-form-number">
-                <div className="student-copy-form-number-title">{t.formNo}</div>
-                <div className="student-copy-form-number-value">{formNumber}</div>
-              </div>
+            </div>
+            <div className="student-copy-form-number">
+              <div className="student-copy-form-number-title">Form No</div>
+              <div className="student-copy-form-number-value">{formNumber}</div>
             </div>
           </div>
           <div className="student-copy-body">
@@ -209,37 +228,54 @@ export default function AdmissionPrintDocument({
               <div className="student-copy-label">{t.studentCopyName}</div>
               <div className="student-copy-value">{admission?.student_name ?? ''}</div>
             </div>
-            <div className="student-copy-field">
+            <div className="student-copy-field student-copy-time">
               <div className="student-copy-label">{t.studentCopyTime}</div>
-              <div className="student-copy-value">{classTime}</div>
+              <div className="student-copy-time-slots">
+                <span className="time-input">{startParts[0] ?? ''}</span>
+                <span className="time-colon">:</span>
+                <span className="time-input">{startParts[1] ?? ''}</span>
+                <span className="time-separator">{t.to}</span>
+                <span className="time-input">{endParts[0] ?? ''}</span>
+                <span className="time-colon">:</span>
+                <span className="time-input">{endParts[1] ?? ''}</span>
+              </div>
             </div>
           </div>
+          <div className="student-copy-footer" aria-hidden="true" />
         </div>
       </div>
 
-      <div className="page">
+      {/* PAGE 2 — rules + admin fee ledger */}
+      <div className="page page-2">
         <div className="rules-page">
           <div className="rules-title">{t.rulesTitle}</div>
 
-          {ruleList.map((text, idx) => (
-            <div className="rule" key={idx}>
-              <div className="rule-number">{idx + 1}.</div>
-              <div className="rule-text">{text}</div>
-            </div>
-          ))}
-
-          <div className="rules-signature">
-            <div className="signature-field">
-              <div className="signature-line">
-                {signatureUrl ? <img src={signatureUrl} alt="" /> : null}
+          <div className="rules-list">
+            {ruleList.map((text, idx) => (
+              <div className="rule" key={idx}>
+                <div className="rule-number">
+                  {lang === 'gu' ? toGuNumber(idx + 1) : idx + 1}.
+                </div>
+                <div className="rule-text">{text}</div>
               </div>
-              {t.studentSignature}
-            </div>
+            ))}
           </div>
 
-          <div className="rule-stamp">
-            <div>{stampText.gu}</div>
-            <div style={{ marginTop: '2mm' }}>{stampText.en}</div>
+          <div className="rules-mid">
+            <div className="rule-stamp">
+              <div>{stampText.gu}</div>
+              <div style={{ marginTop: '2mm' }}>{stampText.en}</div>
+            </div>
+            <div className="rules-signature">
+              <div className="signature-field inline-label">
+                <span>{t.studentSignature}</span>
+                <div className="signature-line">
+                  {signatureUrl ? (
+                    <img src={signatureUrl} alt="" crossOrigin="anonymous" />
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="rules-fee-section">
@@ -250,9 +286,9 @@ export default function AdmissionPrintDocument({
               tableClass="rules-fee-table"
             />
             <div className="administrator-signature">
-              <div className="signature-field">
+              <div className="signature-field inline-label">
+                <span>{t.administratorSignature}</span>
                 <div className="signature-line" />
-                {t.administratorSignature}
               </div>
             </div>
           </div>

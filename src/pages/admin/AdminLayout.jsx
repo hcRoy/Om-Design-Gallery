@@ -98,6 +98,9 @@ export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
 
+  const closeMobile = () => setMobileOpen(false)
+  const toggleMobile = () => setMobileOpen((v) => !v)
+
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
@@ -115,8 +118,8 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-sand flex">
       <Seo title="Admin" noIndex />
 
-      <aside className="hidden lg:flex w-[252px] shrink-0 sticky top-0 h-screen flex-col bg-ivory border-r border-ink/8 px-4 py-6">
-        <div className="mb-8 min-w-0 max-w-full pr-1">
+      <aside className="hidden lg:flex w-[252px] shrink-0 sticky top-0 h-screen flex-col bg-ivory border-r border-ink/8 px-3 py-5">
+        <div className="mb-6 min-w-0 max-w-full">
           <Brand stacked />
         </div>
         <NavList />
@@ -124,15 +127,21 @@ export default function AdminLayout() {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="lg:hidden sticky top-0 z-30 bg-ivory/95 backdrop-blur border-b border-ink/8">
-          <div className="flex items-center justify-between px-4 min-h-16 py-1">
-            <Brand />
+        {/*
+          Keep mobile header above the drawer (z-50 > z-40) so the menu/close
+          button stays clickable while the sidebar is open.
+        */}
+        <header className="lg:hidden sticky top-0 z-50 bg-ivory/95 backdrop-blur border-b border-ink/8">
+          <div className="flex items-center justify-between gap-2 px-3 min-h-14 py-1">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <Brand />
+            </div>
             <button
               type="button"
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileOpen}
-              onClick={() => setMobileOpen((v) => !v)}
-              className="w-9 h-9 rounded-xl text-ink hover:bg-sand inline-flex items-center justify-center transition-colors duration-150"
+              onClick={toggleMobile}
+              className="relative z-10 w-9 h-9 shrink-0 rounded-xl text-ink hover:bg-sand inline-flex items-center justify-center transition-colors duration-150"
             >
               {mobileOpen ? <IconX className="w-5 h-5" /> : <IconMenu className="w-5 h-5" />}
             </button>
@@ -148,31 +157,37 @@ export default function AdminLayout() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
             >
-              <div
-                className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
-                onClick={() => setMobileOpen(false)}
-                aria-hidden="true"
+              <button
+                type="button"
+                className="absolute inset-0 bg-ink/40 backdrop-blur-sm border-0 cursor-default"
+                onClick={closeMobile}
+                aria-label="Close menu"
               />
               <motion.aside
                 initial={{ x: -16, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -16, opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="relative w-[min(280px,86vw)] h-full bg-ivory border-r border-ink/8 px-4 py-6 flex flex-col"
+                className="relative z-10 w-[min(280px,86vw)] h-full bg-ivory border-r border-ink/8 px-3 py-5 flex flex-col shadow-xl"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Admin menu"
               >
-                <div className="flex items-start justify-between gap-3 mb-8 min-w-0">
-                  <Brand stacked />
+                <div className="flex items-start justify-between gap-2 mb-6">
+                  <div className="min-w-0 flex-1 overflow-hidden pr-1">
+                    <Brand stacked />
+                  </div>
                   <button
                     type="button"
                     aria-label="Close menu"
-                    onClick={() => setMobileOpen(false)}
-                    className="w-8 h-8 rounded-lg text-ink-soft hover:bg-sand hover:text-ink
+                    onClick={closeMobile}
+                    className="relative z-10 w-9 h-9 shrink-0 rounded-lg text-ink-soft hover:bg-sand hover:text-ink
                                inline-flex items-center justify-center transition-colors duration-150"
                   >
                     <IconX className="w-4 h-4" />
                   </button>
                 </div>
-                <NavList onNavigate={() => setMobileOpen(false)} />
+                <NavList onNavigate={closeMobile} />
                 <SidebarFooter />
               </motion.aside>
             </motion.div>

@@ -9,7 +9,6 @@ const links = [
   { to: '/', label: 'Home', end: true },
   { to: '/categories', label: 'Categories' },
   { to: '/designs', label: 'All Designs', shortLabel: 'Designs' },
-  { to: '/apply', label: 'Apply for Classes', shortLabel: 'Apply' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
 ]
@@ -27,13 +26,13 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-ivory/95 backdrop-blur border-b border-ink/10">
-      <nav className="max-w-6xl mx-auto flex items-center justify-between gap-3 lg:gap-4 px-4 sm:px-6 h-20 min-w-0">
-        <div className="shrink-0 min-w-0">
+      <nav className="max-w-6xl mx-auto flex items-center justify-between gap-2 lg:gap-3 px-3 sm:px-5 h-[4.5rem] min-w-0">
+        <div className="shrink-0 min-w-0 max-w-[58%] sm:max-w-none">
           <BrandMark onClick={() => setOpen(false)} />
         </div>
 
-        <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-1 xl:px-3">
-          <div className="flex items-center gap-4 xl:gap-6">
+        <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 px-1">
+          <div className="flex items-center gap-3 xl:gap-5">
             {links.map((link) => (
               <NavLink
                 key={link.to}
@@ -58,24 +57,24 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className="shrink-0 flex items-center gap-2 sm:gap-3">
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2.5">
           {!loading && session && <AvatarMenu />}
           {!loading && !session && (
             <button
               onClick={() => navigate('/login')}
-              className="hidden lg:inline-flex btn-primary !py-2.5 !px-5 !text-xs"
+              className="hidden lg:inline-flex btn-primary !py-2 !px-4 !text-xs"
             >
               Login
             </button>
           )}
 
           <button
-            className="lg:hidden text-ink w-10 h-10 inline-flex items-center justify-center"
+            className="lg:hidden text-ink w-9 h-9 inline-flex items-center justify-center"
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               {open ? (
                 <path strokeWidth="2" strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
               ) : (

@@ -71,7 +71,6 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-ivory/80">
               <li><Link to="/categories" className="hover:text-gold-light transition-colors duration-150">Categories</Link></li>
               <li><Link to="/designs" className="hover:text-gold-light transition-colors duration-150">All Designs</Link></li>
-              <li><Link to="/apply" className="hover:text-gold-light transition-colors duration-150">Apply for Classes</Link></li>
               <li><Link to="/about" className="hover:text-gold-light transition-colors duration-150">About Us</Link></li>
               <li><Link to="/contact" className="hover:text-gold-light transition-colors duration-150">Contact</Link></li>
             </ul>

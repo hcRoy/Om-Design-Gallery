@@ -456,6 +456,74 @@ export async function getAdmissionAssetSignedUrl(path, expiresIn = 3600) {
   return { url: data?.signedUrl ?? null, error: null }
 }
 
+function dataUrlToBlob(dataUrl) {
+  const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl)
+  if (!match) return null
+  try {
+    const binary = atob(match[2])
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    return new Blob([bytes], { type: match[1].toLowerCase() })
+  } catch {
+    return null
+  }
+}
+
+/** Admin-only: create admission with photo/signature uploads and form number. */
+export async function createAdmission(payload) {
+  if (!supabase) return { admission: null, error: NOT_CONFIGURED_ERROR }
+
+  const { data: formNumberRaw, error: seqErr } = await supabase.rpc('next_admission_form_number')
+  if (seqErr || formNumberRaw == null) {
+    return { admission: null, error: seqErr?.message ?? 'Could not assign form number' }
+  }
+
+  const photoBlob = dataUrlToBlob(payload.student_photo)
+  if (!photoBlob) return { admission: null, error: 'Invalid photo upload' }
+
+  const sigBlob = dataUrlToBlob(payload.student_signature)
+  if (!sigBlob) return { admission: null, error: 'Invalid signature' }
+
+  const admissionId = crypto.randomUUID()
+  const photoExt = photoBlob.type.includes('png') ? 'png' : 'jpg'
+  const photoPath = `photos/${admissionId}.${photoExt}`
+  const sigPath = `signatures/${admissionId}.png`
+
+  const { error: photoErr } = await supabase.storage
+    .from('admission-photos')
+    .upload(photoPath, photoBlob, { contentType: photoBlob.type, upsert: false })
+  if (photoErr) return { admission: null, error: photoErr.message }
+
+  const { error: sigErr } = await supabase.storage
+    .from('admission-photos')
+    .upload(sigPath, sigBlob, { contentType: sigBlob.type, upsert: false })
+  if (sigErr) return { admission: null, error: sigErr.message }
+
+  const now = new Date().toISOString()
+  const row = {
+    id: admissionId,
+    form_number: Number(formNumberRaw),
+    student_name: payload.student_name,
+    student_mobile: payload.student_mobile,
+    student_photo_url: photoPath,
+    student_signature_url: sigPath,
+    current_address: payload.current_address,
+    permanent_address: payload.permanent_address,
+    reference_details: payload.reference_details || null,
+    class_start_time: payload.class_start_time,
+    class_end_time: payload.class_end_time,
+    preferred_language: payload.preferred_language,
+    agreed_to_terms: true,
+    agreed_at: now,
+    status: 'pending',
+    submitted_at: now,
+  }
+
+  const { data, error } = await supabase.from('admissions').insert(row).select().single()
+  if (error) return { admission: null, error: error.message }
+  return { admission: data, error: null }
+}
+
 // ---------- Users ----------
 
 export async function fetchUsers() {
