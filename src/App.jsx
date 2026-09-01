@@ -15,6 +15,7 @@ import Home from './pages/Home.jsx'
 const About = lazy(() => import('./pages/About.jsx'))
 const Contact = lazy(() => import('./pages/Contact.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
 const Account = lazy(() => import('./pages/Account.jsx'))
 const Categories = lazy(() => import('./pages/Categories.jsx'))
 const Designs = lazy(() => import('./pages/Designs.jsx'))
@@ -69,6 +70,7 @@ export default function App() {
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/categories/:slug" element={<CategoryDetail />} />
                 <Route path="/designs" element={<Designs />} />

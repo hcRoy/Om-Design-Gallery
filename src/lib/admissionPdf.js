@@ -27,8 +27,24 @@ async function waitForFonts() {
 }
 
 /**
+ * Tailwind Preflight sets `img { display: block }`, which breaks html2canvas
+ * FontMetrics baseline measurement (it uses a temporary <img>). Result: DOM
+ * text is painted too low. Temporarily force inline-block during capture.
+ */
+function withHtml2CanvasBaselineFix(run) {
+  const style = document.createElement('style')
+  style.setAttribute('data-admission-h2c-fix', '1')
+  style.textContent = 'img { display: inline-block !important; }'
+  document.head.appendChild(style)
+  return Promise.resolve()
+    .then(run)
+    .finally(() => {
+      style.remove()
+    })
+}
+
+/**
  * Capture each A4 `.page` separately, then merge into a 2-page PDF.
- * Higher scale + PNG keeps serif header text sharp (JPEG softens edges).
  */
 export async function downloadAdmissionPdf(element, filename) {
   if (!element) throw new Error('Nothing to export')
@@ -36,8 +52,6 @@ export async function downloadAdmissionPdf(element, filename) {
   await waitForFonts()
   await waitForImages(element)
 
-  // Briefly place export on-screen so the browser paints fonts at full quality.
-  // Off-screen (-10000px) captures often produce soft / clumsy text.
   const host = element.closest('.admission-pdf-export')
   const prev = host
     ? {
@@ -57,60 +71,64 @@ export async function downloadAdmissionPdf(element, filename) {
     host.style.pointerEvents = 'none'
   }
 
-  // Let layout paint before capture
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
   try {
-    const pages = [...element.querySelectorAll('.page')]
-    if (pages.length === 0) throw new Error('No pages to export')
+    await withHtml2CanvasBaselineFix(async () => {
+      const pages = [...element.querySelectorAll('.page')]
+      if (pages.length === 0) throw new Error('No pages to export')
 
-    const pdf = new jsPDF({
-      unit: 'mm',
-      format: 'a4',
-      orientation: 'portrait',
-      compress: true,
-    })
-
-    const pageW = 210
-    const pageH = 297
-    // ~3× CSS pixels ≈ sharp print text without huge files
-    const scale = Math.min(3, Math.max(2.5, (window.devicePixelRatio || 1) * 2))
-
-    for (let i = 0; i < pages.length; i++) {
-      const page = pages[i]
-      const canvas = await html2canvas(page, {
-        scale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0,
-        width: page.offsetWidth,
-        height: page.offsetHeight,
-        windowWidth: page.offsetWidth,
-        windowHeight: page.offsetHeight,
-        onclone(doc) {
-          const cloneRoot = doc.querySelector('.admission-print-root')
-          if (!cloneRoot) return
-          cloneRoot.style.webkitFontSmoothing = 'antialiased'
-          cloneRoot.style.mozOsxFontSmoothing = 'grayscale'
-          cloneRoot.style.textRendering = 'geometricPrecision'
-          // Prevent subpixel blur on large header type
-          cloneRoot.querySelectorAll('.company-name, .student-copy-company-name').forEach((el) => {
-            el.style.transform = 'translateZ(0)'
-            el.style.backfaceVisibility = 'hidden'
-          })
-        },
+      const pdf = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait',
+        compress: true,
       })
 
-      // PNG keeps crisp glyph edges; JPEG makes serif headers look "clumsy"
-      const imgData = canvas.toDataURL('image/png')
-      if (i > 0) pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, 0, pageW, pageH, undefined, 'MEDIUM')
-    }
+      const pageW = 210
+      const pageH = 297
+      const scale = Math.min(3, Math.max(2.5, (window.devicePixelRatio || 1) * 2))
 
-    pdf.save(filename || 'admission.pdf')
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i]
+        const canvas = await html2canvas(page, {
+          scale,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0,
+          width: page.offsetWidth,
+          height: page.offsetHeight,
+          windowWidth: page.offsetWidth,
+          windowHeight: page.offsetHeight,
+          onclone(doc) {
+            const cloneRoot = doc.querySelector('.admission-print-root')
+            if (!cloneRoot) return
+            cloneRoot.style.webkitFontSmoothing = 'antialiased'
+            cloneRoot.style.mozOsxFontSmoothing = 'grayscale'
+            cloneRoot.style.textRendering = 'geometricPrecision'
+
+            // Same baseline fix inside the cloned document
+            const fix = doc.createElement('style')
+            fix.textContent = 'img { display: inline-block !important; }'
+            doc.head.appendChild(fix)
+
+            cloneRoot.querySelectorAll('.company-name').forEach((el) => {
+              el.style.transform = 'translateZ(0)'
+              el.style.backfaceVisibility = 'hidden'
+            })
+          },
+        })
+
+        const imgData = canvas.toDataURL('image/png')
+        if (i > 0) pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, 0, pageW, pageH, undefined, 'MEDIUM')
+      }
+
+      pdf.save(filename || 'admission.pdf')
+    })
   } finally {
     if (host && prev) {
       host.style.left = prev.left

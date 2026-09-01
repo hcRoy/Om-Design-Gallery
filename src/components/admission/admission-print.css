@@ -103,7 +103,7 @@
 }
 
 .admission-print-root .company-address {
-  margin-top: 1.6mm;
+  /* margin-top: 1.6mm; */
   font-family: Arial, Helvetica, sans-serif;
   font-size: 11px;
   font-weight: 700;
@@ -115,29 +115,37 @@
 }
 
 .admission-print-root .company-mobile {
-  display: none;
+  margin-top: 0.6mm;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
 }
 
 .admission-print-root .form-number-box {
   position: relative;
   align-self: center;
   flex-shrink: 0;
-  width: 27mm;
+  width: 32mm;
   margin-right: 3mm;
-  padding: 1.8mm 2mm 2mm;
+  padding: 2mm 2.5mm 2.5mm;
   border: 1.5px solid #222;
   border-radius: 3mm;
   background: var(--form-yellow);
   text-align: center;
   z-index: 2;
+  /* block layout — avoid flex here (html2canvas text bugs compound inside flex) */
+  display: block;
 }
 
 .admission-print-root .form-number-label {
+  display: block;
   font-family: Georgia, "Times New Roman", "Times", serif;
   font-weight: 700;
-  font-size: 13px;
-  line-height: 1.1;
-  margin-bottom: 1.5mm;
+  font-size: 17px;
+  line-height: 1.15;
+  padding: 0 0 2.5mm;
+  margin: 0;
   color: #000;
 }
 
@@ -145,17 +153,17 @@
   display: none;
 }
 
-.admission-print-root .form-number-value {
-  height: 10mm;
+/* Canvas-drawn form number — already centered in pixels; no CSS text centering */
+.admission-print-root .form-number-value-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
   background: #fff;
-  border: 1px solid #888;
-  border-radius: 0.5mm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: bold;
-  color: #000;
 }
 
 .admission-print-root .form-title-bar {
@@ -273,7 +281,8 @@
 }
 
 .admission-print-root .student-name-row,
-.admission-print-root .mobile-row {
+.admission-print-root .mobile-row,
+.admission-print-root .father-row {
   padding-right: 38mm;
 }
 
@@ -347,6 +356,47 @@
   font-size: 13px;
   font-weight: bold;
   margin: 0 1mm;
+}
+
+.admission-print-root .batch-type-label {
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 2mm;
+}
+
+.admission-print-root .batch-type-input {
+  width: 12mm;
+  border-bottom: 1px dotted var(--form-line);
+  min-height: 6.5mm;
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.admission-print-root .package-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5mm;
+  margin: 1.5mm 0 2.5mm;
+  position: relative;
+  z-index: 2;
+}
+
+.admission-print-root .package-label {
+  font-size: 16px;
+  font-weight: bold;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.admission-print-root .package-value {
+  flex: 1;
+  border-bottom: 1px dotted var(--form-line);
+  min-height: 7mm;
+  padding: 0 1.5mm 1mm;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1.25;
 }
 
 .admission-print-root .admission-footer {
@@ -462,7 +512,7 @@
 .admission-print-root .scissors {
   position: absolute;
   left: 0;
-  top: -4mm;
+  top: -2mm;
   font-size: 14px;
   background: #fff;
   padding-right: 2mm;
@@ -471,131 +521,28 @@
 
 .admission-print-root .student-copy {
   flex-shrink: 0;
-  height: 52mm;
   border: 1px solid var(--form-border);
-  background: var(--form-yellow);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.admission-print-root .student-copy-header {
-  height: 26mm;
-  display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-  background: var(--form-yellow);
-  position: relative;
-  overflow: hidden;
-}
-
-.admission-print-root .student-copy-logo-section {
-  width: 30mm;
-  margin-right: 0mm;
-  margin-left: -3mm;
-  padding-left: 3mm;
-  background: var(--form-olive);
-  transform: skewX(14deg);
-  /* transform-origin: top left; */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  z-index: 1;
-}
-
-.admission-print-root .student-copy-logo {
-  width: 15mm;
-  height: 15mm;
-  object-fit: contain;
-  transform: skewX(-14deg);
-}
-
-.admission-print-root .student-copy-content {
-  flex: 1;
-  min-width: 0;
-  padding: 0mm 2mm 0mm 5mm;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  /* justify-content: center; */
-  text-align: left;
-  z-index: 0;
-}
-
-.admission-print-root .student-copy-company-name {
-  font-family: Georgia, "Times New Roman", "Times", serif;
-  font-size: 38px;
-  font-weight: 700;
-  /* line-height: 1.05; */
-  color: #000;
-}
-
-.admission-print-root .student-copy-address {
-  margin-top: 1mm;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  line-height: 1.25;
-  max-width: 110mm;
-  color: #000;
-}
-
-.admission-print-root .student-copy-mobile {
-  margin-top: 0.6mm;
-  font-size: 13px;
-  font-weight: 700;
-  color: #000;
-}
-
-.admission-print-root .student-copy-form-number {
-  position: relative;
-  align-self: center;
-  flex-shrink: 0;
-  width: 25mm;
-  margin-right: 2.5mm;
-  padding: 1.2mm 1.5mm 1.5mm;
-  border: 1.5px solid #222;
-  border-radius: 2.5mm;
-  background: var(--form-yellow);
-  text-align: center;
-  z-index: 2;
-}
-
-.admission-print-root .student-copy-form-number-title {
-  font-family: Georgia, "Times New Roman", "Times", serif;
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 1mm;
-  color: #000;
-}
-
-.admission-print-root .student-copy-form-number-value {
-  height: 8mm;
   background: #fff;
-  border: 1px solid #888;
-  border-radius: 0.5mm;
+  position: relative;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: bold;
-  color: #000;
+  flex-direction: column;
+}
+
+.admission-print-root .student-copy .company-header {
+  flex-shrink: 0;
 }
 
 .admission-print-root .student-copy-body {
-  flex: 1;
+  flex-shrink: 0;
   background: #fff;
-  padding: 3.5mm 4mm 3mm;
+  padding: 3mm 4mm 3.5mm;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4mm;
+  gap: 3.5mm;
   position: relative;
+  border-top: 1px solid var(--form-border);
 }
 
 .admission-print-root .student-copy-field {
@@ -624,6 +571,32 @@
   font-size: 12px;
 }
 
+.admission-print-root .student-copy-time-slots .batch-type-label {
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 1.5mm;
+}
+
+.admission-print-root .student-copy-time-slots .batch-type-input {
+  display: inline-block;
+  width: 10mm;
+  border-bottom: 1px dotted var(--form-line);
+  min-height: 5.5mm;
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.admission-print-root .student-copy-package .student-copy-label {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.admission-print-root .student-copy-package .student-copy-value {
+  font-size: 17px;
+  font-weight: bold;
+}
+
 .admission-print-root .student-copy-label {
   font-size: 12px;
   font-weight: bold;
@@ -637,13 +610,6 @@
   min-height: 5.5mm;
   font-size: 12px;
   padding-bottom: 0.5mm;
-}
-
-.admission-print-root .student-copy-footer {
-  height: 2.5mm;
-  background: var(--form-yellow);
-  flex-shrink: 0;
-  display: none;
 }
 
 /* ---------- Page 2 rules ---------- */
@@ -674,7 +640,7 @@
   display: flex;
   gap: 2mm;
   margin-bottom: 3.8mm;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.45;
   font-weight: 600;
 }
@@ -760,8 +726,7 @@
 }
 
 /* Keep large header type sharp when rasterized for PDF */
-.admission-pdf-export .admission-print-root .company-name,
-.admission-pdf-export .admission-print-root .student-copy-company-name {
+.admission-pdf-export .admission-print-root .company-name {
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }

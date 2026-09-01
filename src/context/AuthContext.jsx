@@ -63,6 +63,13 @@ export function AuthProvider({ children }) {
           return;
         }
 
+        if (event === "PASSWORD_RECOVERY") {
+          if (newSession?.user?.id) {
+            loadProfile(newSession.user.id);
+          }
+          return;
+        }
+
         // SIGNED_IN / USER_UPDATED / INITIAL_SESSION — refresh profile
         // in the background without gating the whole app on loading.
         if (newSession?.user?.id) {

@@ -8,14 +8,10 @@ import { useToast } from '../context/ToastContext.jsx'
 import { callEdgeFunction } from '../lib/razorpay.js'
 
 /**
- * JUDGMENT CALL: phone is the auth identifier (it's how the user signed
- * in), so editing it here is treated as "update contact record" only —
- * it does NOT re-verify the new number via OTP or change what the user
- * signs in with. If you want phone changes to require re-verification
- * (the safer pattern, since otherwise someone could put in a number
- * they don't own), that's a Supabase `auth.updateUser({ phone })` +
- * OTP-confirm flow, which I'd treat as its own small feature rather than
- * bundle into this form silently.
+ * JUDGMENT CALL: phone and email are contact/profile fields here.
+ * Login credentials live in Supabase Auth (email + password). Changing
+ * email here does not change the sign-in email unless you also call
+ * auth.updateUser — keep them in sync manually or extend this form later.
  */
 export default function Account() {
   const { user, profile, refreshProfile, configured, session } = useAuth()

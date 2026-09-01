@@ -9,15 +9,19 @@ import { formCopy, rules } from "../../lib/i18n/admissionTranslations.js";
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const MOBILE_RE = /^[6-9]\d{9}$/;
+const BATCH_TYPES = ["A", "B", "C", "D", "E", "F", "G"];
 
 const emptyForm = {
   student_name: "",
   student_mobile: "",
+  father_mobile: "",
   current_address: "",
   permanent_address: "",
   reference_details: "",
   class_start_time: "",
   class_end_time: "",
+  batch_type: "",
+  package: "",
 };
 
 const inputClass =
@@ -162,17 +166,28 @@ export default function AdmissionNew() {
     setField("student_mobile", digits);
   };
 
+  const handleFatherMobileChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setField("father_mobile", digits);
+  };
+
   const validate = () => {
     const errors = {};
     if (!form.student_name.trim()) errors.student_name = t.errors.name;
     const mobile = form.student_mobile.replace(/\D/g, "");
     if (!mobile) errors.student_mobile = t.errors.mobile;
     else if (!MOBILE_RE.test(mobile)) errors.student_mobile = t.errors.mobile;
+    const fatherMobile = form.father_mobile.replace(/\D/g, "");
+    if (fatherMobile && !MOBILE_RE.test(fatherMobile)) {
+      errors.father_mobile = t.errors.fatherMobile;
+    }
     if (!photoDataUrl) errors.photo = t.errors.photo;
     if (!form.current_address.trim()) errors.current_address = t.errors.currentAddress;
     if (!form.permanent_address.trim()) errors.permanent_address = t.errors.permanentAddress;
     if (!form.class_start_time.trim()) errors.class_start_time = t.errors.classStart;
     if (!form.class_end_time.trim()) errors.class_end_time = t.errors.classEnd;
+    if (!form.batch_type) errors.batch_type = t.errors.batchType;
+    if (!form.package.trim()) errors.package = t.errors.package;
     if (!signatureDataUrl) errors.signature = t.errors.signature;
     if (!agreed) errors.agree = t.errors.agree;
     setFieldErrors(errors);
@@ -214,9 +229,11 @@ export default function AdmissionNew() {
 
     setSubmitting(true);
     const mobile = form.student_mobile.replace(/\D/g, "");
+    const fatherMobile = form.father_mobile.replace(/\D/g, "");
     const { admission, error } = await createAdmission({
       student_name: form.student_name.trim(),
       student_mobile: mobile,
+      father_mobile: fatherMobile || null,
       student_photo: photoDataUrl,
       student_signature: signatureDataUrl,
       current_address: form.current_address.trim(),
@@ -224,6 +241,8 @@ export default function AdmissionNew() {
       reference_details: form.reference_details.trim() || null,
       class_start_time: form.class_start_time.trim(),
       class_end_time: form.class_end_time.trim(),
+      batch_type: form.batch_type,
+      package: form.package.trim(),
       preferred_language: language,
     });
     setSubmitting(false);
@@ -299,6 +318,26 @@ export default function AdmissionNew() {
                       className={inputClass}
                       placeholder={t.mobilePlaceholder}
                       aria-required="true"
+                    />
+                  </FormField>
+
+                  <FormField
+                    label={t.fatherMobile}
+                    htmlFor="father_mobile"
+                    optionalLabel={t.optionalLabel}
+                    error={fieldErrors.father_mobile}
+                  >
+                    <input
+                      id="father_mobile"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={10}
+                      pattern="[6-9][0-9]{9}"
+                      value={form.father_mobile}
+                      onChange={handleFatherMobileChange}
+                      className={inputClass}
+                      placeholder={t.mobilePlaceholder}
                     />
                   </FormField>
 
@@ -431,7 +470,7 @@ export default function AdmissionNew() {
 
               <FormSection number={3} title={t.sectionClass}>
                 <FormField label={t.classTime} required>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl">
                     <div>
                       <label
                         className="text-xs font-semibold text-ink-soft mb-1.5 block"
@@ -474,7 +513,46 @@ export default function AdmissionNew() {
                       />
                       <FieldError message={fieldErrors.class_end_time} />
                     </div>
+                    <div>
+                      <label
+                        className="text-xs font-semibold text-ink-soft mb-1.5 block"
+                        htmlFor="batch_type"
+                      >
+                        {t.batchType}
+                        <RequiredMark />
+                      </label>
+                      <select
+                        id="batch_type"
+                        value={form.batch_type}
+                        onChange={(e) => setField("batch_type", e.target.value)}
+                        className={inputClass}
+                        aria-required="true"
+                      >
+                        <option value="">{t.batchTypePlaceholder}</option>
+                        {BATCH_TYPES.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                        ))}
+                      </select>
+                      <FieldError message={fieldErrors.batch_type} />
+                    </div>
                   </div>
+                </FormField>
+
+                <FormField
+                  label={t.package}
+                  htmlFor="package"
+                  required
+                  error={fieldErrors.package}
+                >
+                  <input
+                    id="package"
+                    type="text"
+                    value={form.package}
+                    onChange={(e) => setField("package", e.target.value)}
+                    className={inputClass}
+                    placeholder={t.packagePlaceholder}
+                    aria-required="true"
+                  />
                 </FormField>
               </FormSection>
 

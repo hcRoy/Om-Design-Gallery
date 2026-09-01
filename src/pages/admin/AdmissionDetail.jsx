@@ -208,6 +208,7 @@ export default function AdmissionDetail() {
               <dl>
                 <FieldRow label="Form number" value={admission.form_number} />
                 <FieldRow label="Mobile" value={admission.student_mobile} />
+                <FieldRow label="Father mobile" value={admission.father_mobile} />
                 <FieldRow label="Current address" value={admission.current_address} />
                 <FieldRow label="Permanent address" value={admission.permanent_address} />
                 <FieldRow label="Reference" value={admission.reference_details} />
@@ -219,6 +220,8 @@ export default function AdmissionDetail() {
                       : null
                   }
                 />
+                <FieldRow label="Batch type" value={admission.batch_type} />
+                <FieldRow label="Package" value={admission.package} />
                 <FieldRow label="Language" value={admission.preferred_language} />
                 <FieldRow
                   label="Submitted"
