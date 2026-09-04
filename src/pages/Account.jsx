@@ -4,7 +4,9 @@ import { updateProfile } from '../lib/auth.js'
 import { supabase } from '../lib/supabaseClient.js'
 import Section from '../components/Section.jsx'
 import Seo from '../components/Seo.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { useToast } from '../context/ToastContext.jsx'
+import { useClientPagination } from '../hooks/useClientPagination.js'
 import { callEdgeFunction } from '../lib/razorpay.js'
 
 /**
@@ -25,6 +27,8 @@ export default function Account() {
   const [ordersError, setOrdersError] = useState('')
   const [downloadingOrderId, setDownloadingOrderId] = useState(null)
   const [downloadUrls, setDownloadUrls] = useState({})
+  const { pageItems, page, setPage, pageSize, setPageSize, total } =
+    useClientPagination(orders)
 
   useEffect(() => {
     if (profile) {
@@ -245,74 +249,83 @@ export default function Account() {
         ) : orders.length === 0 ? (
           <p className="mt-6 text-sm text-ink-soft">No orders yet. Purchase a design to see it here.</p>
         ) : (
-          <div className="mt-6 bg-white rounded-xl border border-ink/10 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-widest2 text-ink-soft bg-sand/50 border-b border-ink/10">
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Amount</th>
-                    <th className="px-4 py-3 font-semibold">Paid via</th>
-                    <th className="px-4 py-3 font-semibold">Date</th>
-                    <th className="px-4 py-3 font-semibold">Design</th>
-                    <th className="px-4 py-3 font-semibold text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ink/5">
-                  {orders.map((o) => {
-                    const statusTone =
-                      o.status === 'paid'
-                        ? 'bg-teal/10 text-teal'
-                        : o.status === 'failed'
-                          ? 'bg-maroon/10 text-maroon'
-                          : 'bg-ink/10 text-ink-soft'
-                    return (
-                      <tr key={o.id} className="align-top">
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${statusTone}`}>
-                            {o.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-ink-soft">₹{o.amount}</td>
-                        <td className="px-4 py-4 text-ink-soft capitalize">
-                          {o.payment_method || '—'}
-                        </td>
-                        <td className="px-4 py-4 text-ink-soft">
-                          {o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-4 py-4">
-                          <p className="font-semibold text-ink">{o.designName}</p>
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          {o.status !== 'paid' ? (
-                            <span className="text-xs text-ink-soft">—</span>
-                          ) : downloadUrls[o.id] ? (
-                            <a
-                              href={downloadUrls[o.id]}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn-primary inline-flex !rounded-xl !py-2.5 !px-5 text-xs"
-                            >
-                              Download your file
-                            </a>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={downloadingOrderId === o.id}
-                              onClick={() => handleGetDownloadLink(o.id)}
-                              className="btn-outline inline-flex !rounded-xl !py-2.5 !px-5 text-xs disabled:opacity-60"
-                            >
-                              {downloadingOrderId === o.id ? 'Generating…' : 'Get download link'}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+          <>
+            <div className="mt-6 bg-white rounded-xl border border-ink/10 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-widest2 text-ink-soft bg-sand/50 border-b border-ink/10">
+                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 font-semibold">Amount</th>
+                      <th className="px-4 py-3 font-semibold">Paid via</th>
+                      <th className="px-4 py-3 font-semibold">Date</th>
+                      <th className="px-4 py-3 font-semibold">Design</th>
+                      <th className="px-4 py-3 font-semibold text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink/5">
+                    {pageItems.map((o) => {
+                      const statusTone =
+                        o.status === 'paid'
+                          ? 'bg-teal/10 text-teal'
+                          : o.status === 'failed'
+                            ? 'bg-maroon/10 text-maroon'
+                            : 'bg-ink/10 text-ink-soft'
+                      return (
+                        <tr key={o.id} className="align-top">
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${statusTone}`}>
+                              {o.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-ink-soft">₹{o.amount}</td>
+                          <td className="px-4 py-4 text-ink-soft capitalize">
+                            {o.payment_method || '—'}
+                          </td>
+                          <td className="px-4 py-4 text-ink-soft">
+                            {o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="px-4 py-4">
+                            <p className="font-semibold text-ink">{o.designName}</p>
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            {o.status !== 'paid' ? (
+                              <span className="text-xs text-ink-soft">—</span>
+                            ) : downloadUrls[o.id] ? (
+                              <a
+                                href={downloadUrls[o.id]}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn-primary inline-flex !rounded-xl !py-2.5 !px-5 text-xs"
+                              >
+                                Download your file
+                              </a>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={downloadingOrderId === o.id}
+                                onClick={() => handleGetDownloadLink(o.id)}
+                                className="btn-outline inline-flex !rounded-xl !py-2.5 !px-5 text-xs disabled:opacity-60"
+                              >
+                                {downloadingOrderId === o.id ? 'Generating…' : 'Get download link'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          </>
         )}
       </div>
     </Section>

@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import Section from '../components/Section.jsx'
 import Card from '../components/Card.jsx'
 import Seo from '../components/Seo.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
+import { useClientPagination } from '../hooks/useClientPagination.js'
 import { fetchWishlistDesigns, removeFromWishlist } from '../lib/wishlist.js'
 
 export default function Wishlist() {
@@ -13,6 +15,8 @@ export default function Wishlist() {
   const [designs, setDesigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [removingId, setRemovingId] = useState(null)
+  const { pageItems, page, setPage, pageSize, setPageSize, total } =
+    useClientPagination(designs)
 
   useEffect(() => {
     if (!user) return
@@ -57,35 +61,44 @@ export default function Wishlist() {
           </Link>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {designs.map((d) => (
-            <Card
-              key={d.id}
-              to={`/designs/${d.slug}`}
-              image={d.thumbnail_url}
-              imageAlt={d.name}
-              eyebrow={d.file_format}
-              title={d.name}
-              description={d.description}
-              footer={
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-maroon">₹{d.price}</p>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleRemove(d.id)
-                    }}
-                    disabled={removingId === d.id}
-                    className="text-xs text-ink-soft underline underline-offset-4 hover:text-maroon disabled:opacity-60"
-                  >
-                    {removingId === d.id ? 'Removing…' : 'Remove'}
-                  </button>
-                </div>
-              }
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pageItems.map((d) => (
+              <Card
+                key={d.id}
+                to={`/designs/${d.slug}`}
+                image={d.thumbnail_url}
+                imageAlt={d.name}
+                eyebrow={d.file_format}
+                title={d.name}
+                description={d.description}
+                footer={
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-maroon">₹{d.price}</p>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleRemove(d.id)
+                      }}
+                      disabled={removingId === d.id}
+                      className="text-xs text-ink-soft underline underline-offset-4 hover:text-maroon disabled:opacity-60"
+                    >
+                      {removingId === d.id ? 'Removing…' : 'Remove'}
+                    </button>
+                  </div>
+                }
+              />
+            ))}
+          </div>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
       )}
     </Section>
   )

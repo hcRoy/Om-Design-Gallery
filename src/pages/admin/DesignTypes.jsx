@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '../../components/Modal.jsx'
+import Pagination from '../../components/Pagination.jsx'
 import Seo from '../../components/Seo.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
 import { useAdminFormModal } from '../../hooks/useAdminFormModal.js'
+import { useClientPagination } from '../../hooks/useClientPagination.js'
 import {
   fetchAllDesignTypes,
   createDesignType,
@@ -92,6 +94,11 @@ export default function DesignTypes() {
         .includes(q)
     })
   }, [rows, query, statusFilter])
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } =
+    useClientPagination(filtered, {
+      resetKey: `${query}|${statusFilter}`,
+    })
 
   const openEdit = (row) => {
     openEditModal(row.id, {
@@ -208,7 +215,7 @@ export default function DesignTypes() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns} minWidth={560}>
-              {filtered.map((row) => (
+              {pageItems.map((row) => (
                 <tr
                   key={row.id}
                   className="group hover:bg-sand/40 transition-colors duration-150"
@@ -238,7 +245,7 @@ export default function DesignTypes() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((row) => (
+            {pageItems.map((row) => (
               <article key={row.id} className="admin-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -258,6 +265,14 @@ export default function DesignTypes() {
               </article>
             ))}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </>
       )}
 

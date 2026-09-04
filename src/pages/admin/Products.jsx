@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import Modal from "../../components/Modal.jsx";
 import Seo from "../../components/Seo.jsx";
+import Pagination from "../../components/Pagination.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useAdminFormModal } from "../../hooks/useAdminFormModal.js";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue.js";
 import { slugify } from "../../lib/slugify.js";
+import { DEFAULT_PAGE_SIZE } from "../../lib/pagination.js";
 import { fetchCategories, FILE_FORMATS } from "../../lib/catalog.js";
 import {
   fetchAllDesigns,
@@ -22,7 +25,6 @@ import EmptyState from "../../components/admin/EmptyState.jsx";
 import Alert from "../../components/admin/Alert.jsx";
 import ConfirmDialog from "../../components/admin/ConfirmDialog.jsx";
 import FileDropzone from "../../components/admin/FileDropzone.jsx";
-import RichTextEditor from "../../components/admin/RichTextEditor.jsx";
 import ImagePreviewModal, {
   PreviewThumb,
 } from "../../components/admin/ImagePreviewModal.jsx";
@@ -42,6 +44,10 @@ import {
   IconPackage,
   IconImage,
 } from "../../components/admin/icons.jsx";
+
+const RichTextEditor = lazy(
+  () => import("../../components/admin/RichTextEditor.jsx"),
+);
 
 const emptyForm = {
   name: "",
@@ -81,6 +87,7 @@ const tableColumns = [
 export default function Products() {
   const { showToast } = useToast();
   const [designs, setDesigns] = useState([]);
+  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [designTypes, setDesignTypes] = useState([]);
@@ -89,6 +96,9 @@ export default function Products() {
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const debouncedQuery = useDebouncedValue(query);
 
   const {
     modalOpen,
@@ -115,19 +125,36 @@ export default function Products() {
 
   const load = () => {
     setLoading(true);
-    fetchAllDesigns().then(({ designs: d, error: err }) => {
+    fetchAllDesigns({
+      page,
+      pageSize,
+      query: debouncedQuery,
+      status: statusFilter,
+    }).then(({ designs: d, total: t, error: err }) => {
       setDesigns(d);
+      setTotal(t);
       setError(err ?? "");
       setLoading(false);
     });
   };
 
   useEffect(() => {
-    load();
     fetchCategories().then(({ categories: c }) => setCategories(c));
     fetchAllSubcategories().then(({ subcategories: s }) => setSubcategories(s));
     fetchAllDesignTypes().then(({ designTypes: t }) => setDesignTypes(t));
   }, []);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when page params change
+  }, [page, pageSize, debouncedQuery, statusFilter]);
+
+  const hasFilters = Boolean(debouncedQuery.trim()) || statusFilter !== "all";
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setPage(1);
+  };
 
   const subcatsForCategory = useMemo(
     () => subcategories.filter((s) => s.category_id === form.category_id),
@@ -139,28 +166,6 @@ export default function Products() {
     const selectedId = form.design_type_id;
     return designTypes.filter((t) => t.is_active || t.id === selectedId);
   }, [designTypes, form.design_type_id]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return designs.filter((d) => {
-      if (statusFilter === "active" && !d.is_active) return false;
-      if (statusFilter === "draft" && d.is_active) return false;
-      if (!q) return true;
-      const hay = [
-        d.design_id,
-        d.name,
-        d.slug,
-        d.categories?.name,
-        d.subcategories?.name,
-        d.design_types?.name,
-        d.file_format,
-        ...(d.tags ?? []),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [designs, query, statusFilter]);
 
   const openEdit = (d) => {
     openEditModal(
@@ -326,7 +331,7 @@ export default function Products() {
       <Seo title="Products" noIndex />
       <PageHeader
         title="Products"
-        description={`${designs.length} design${designs.length === 1 ? "" : "s"} in the catalogue.`}
+        description={`${total} design${total === 1 ? "" : "s"} in the catalogue.`}
         action={
           <button onClick={openCreate} className="btn-admin">
             <IconPlus className="w-4 h-4" />
@@ -339,16 +344,22 @@ export default function Products() {
 
       <SearchBar
         value={query}
-        onChange={setQuery}
-        placeholder="Search by ID, name, slug, category, or tag…"
+        onChange={(value) => {
+          setQuery(value);
+          setPage(1);
+        }}
+        placeholder="Search by ID, name, or slug…"
         filters={STATUS_FILTERS}
         activeFilter={statusFilter}
-        onFilter={setStatusFilter}
+        onFilter={(value) => {
+          setStatusFilter(value);
+          setPage(1);
+        }}
       />
 
       {loading ? (
         <TableSkeleton rows={6} cols={5} />
-      ) : designs.length === 0 ? (
+      ) : total === 0 && !hasFilters ? (
         <div className="admin-card">
           <EmptyState
             icon={<IconPackage className="w-7 h-7" />}
@@ -362,7 +373,7 @@ export default function Products() {
             }
           />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : total === 0 ? (
         <div className="admin-card">
           <EmptyState
             icon={<IconPackage className="w-7 h-7" />}
@@ -374,7 +385,7 @@ export default function Products() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns}>
-              {filtered.map((d) => (
+              {designs.map((d) => (
                 <tr
                   key={d.id}
                   className="group hover:bg-sand/40 transition-colors duration-150"
@@ -451,7 +462,7 @@ export default function Products() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((d) => (
+            {designs.map((d) => (
               <article key={d.id} className="admin-card p-4">
                 <div className="flex gap-3">
                   <PreviewThumb
@@ -494,6 +505,14 @@ export default function Products() {
               </article>
             ))}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </>
       )}
 
@@ -607,12 +626,18 @@ export default function Products() {
               htmlFor="product-desc"
               hint="Rich text — formatting is preserved on the product page."
             >
-              <RichTextEditor
-                value={form.description}
-                onChange={(html) =>
-                  setForm((f) => ({ ...f, description: html }))
+              <Suspense
+                fallback={
+                  <div className="h-40 rounded-xl border border-ink/10 bg-sand/40 animate-pulse" />
                 }
-              />
+              >
+                <RichTextEditor
+                  value={form.description}
+                  onChange={(html) =>
+                    setForm((f) => ({ ...f, description: html }))
+                  }
+                />
+              </Suspense>
             </Field>
           </FormSection>
 

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/Modal.jsx";
+import Pagination from "../../components/Pagination.jsx";
 import Seo from "../../components/Seo.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useAdminFormModal } from "../../hooks/useAdminFormModal.js";
+import { useClientPagination } from "../../hooks/useClientPagination.js";
 import {
   fetchAllCarouselSlides,
   createCarouselSlide,
@@ -97,6 +99,11 @@ export default function CarouselSlides() {
         .includes(q);
     });
   }, [slides, query, statusFilter]);
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } =
+    useClientPagination(filtered, {
+      resetKey: `${query}|${statusFilter}`,
+    });
 
   const openEdit = (slide) => {
     openEditModal(slide.id, {
@@ -230,7 +237,7 @@ export default function CarouselSlides() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns} minWidth={640}>
-              {filtered.map((slide) => (
+              {pageItems.map((slide) => (
                 <tr
                   key={slide.id}
                   className="group hover:bg-sand/40 transition-colors duration-150"
@@ -284,7 +291,7 @@ export default function CarouselSlides() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((slide) => (
+            {pageItems.map((slide) => (
               <article key={slide.id} className="admin-card p-4">
                 <div className="flex gap-3">
                   <div className="w-20 h-14 rounded-lg bg-sand overflow-hidden shrink-0">
@@ -318,6 +325,14 @@ export default function CarouselSlides() {
               </article>
             ))}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </>
       )}
 

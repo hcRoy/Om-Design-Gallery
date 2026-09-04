@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/Modal.jsx";
+import Pagination from "../../components/Pagination.jsx";
 import Seo from "../../components/Seo.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useAdminFormModal } from "../../hooks/useAdminFormModal.js";
+import { useClientPagination } from "../../hooks/useClientPagination.js";
 import { slugify } from "../../lib/slugify.js";
 import {
   fetchAllCategories,
@@ -95,6 +97,11 @@ export default function Subcategories() {
         .includes(q),
     );
   }, [subcategories, query]);
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } =
+    useClientPagination(filtered, {
+      resetKey: query,
+    });
 
   const openCreate = () => {
     openCreateModal({ category_id: categories[0]?.id ?? "" });
@@ -254,7 +261,7 @@ export default function Subcategories() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns} minWidth={640}>
-              {filtered.map((row) => (
+              {pageItems.map((row) => (
                 <tr
                   key={row.id}
                   className="group hover:bg-sand/40 transition-colors duration-150"
@@ -304,7 +311,7 @@ export default function Subcategories() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((row) => (
+            {pageItems.map((row) => (
               <article key={row.id} className="admin-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex gap-3 min-w-0">
@@ -336,6 +343,14 @@ export default function Subcategories() {
               </article>
             ))}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </>
       )}
 

@@ -1,0 +1,2 @@
+[functions.sign-in-with-phone]
+verify_jwt = false

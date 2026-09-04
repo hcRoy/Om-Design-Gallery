@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
 import Seo from '../../components/Seo.jsx'
+import Pagination from '../../components/Pagination.jsx'
 import Modal from '../../components/Modal.jsx'
 import { fetchUsers, updateUserRole, creditUserWallet } from '../../lib/admin.js'
+import { DEFAULT_PAGE_SIZE } from '../../lib/pagination.js'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue.js'
 import PageHeader from '../../components/admin/PageHeader.jsx'
 import SearchBar from '../../components/admin/SearchBar.jsx'
 import Badge from '../../components/admin/Badge.jsx'
@@ -88,11 +91,16 @@ export default function Users() {
   const { user: currentUser, session } = useAuth()
   const { showToast } = useToast()
   const [users, setUsers] = useState([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const debouncedQuery = useDebouncedValue(query)
+  const hasFilters = Boolean(debouncedQuery.trim()) || roleFilter !== 'all'
   const [pendingPromote, setPendingPromote] = useState(null)
 
   const [creditUser, setCreditUser] = useState(null)
@@ -102,24 +110,28 @@ export default function Users() {
 
   const load = () => {
     setLoading(true)
-    fetchUsers().then(({ users: u, error: err }) => {
+    fetchUsers({
+      page,
+      pageSize,
+      query: debouncedQuery,
+      role: roleFilter,
+    }).then(({ users: u, total: t, error: err }) => {
       setUsers(u)
+      setTotal(t)
       setError(err ?? '')
       setLoading(false)
     })
   }
 
-  useEffect(load, [])
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, debouncedQuery, roleFilter])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return users.filter((u) => {
-      if (roleFilter !== 'all' && u.role !== roleFilter) return false
-      if (!q) return true
-      const hay = [u.full_name, u.phone, u.email, u.role].join(' ').toLowerCase()
-      return hay.includes(q)
-    })
-  }, [users, query, roleFilter])
+  const handlePageSizeChange = (size) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const applyRole = async (u, nextRole) => {
     setBusyId(u.id)
@@ -196,23 +208,29 @@ export default function Users() {
       <Seo title="Users" noIndex />
       <PageHeader
         title="Users"
-        description={`${users.length} registered account${users.length === 1 ? '' : 's'}. Promote carefully — admin access is unrestricted.`}
+        description={`${total} registered account${total === 1 ? '' : 's'}. Promote carefully — admin access is unrestricted.`}
       />
 
       {error && <Alert>{error}</Alert>}
 
       <SearchBar
         value={query}
-        onChange={setQuery}
+        onChange={(value) => {
+          setQuery(value)
+          setPage(1)
+        }}
         placeholder="Search by name, phone, or email…"
         filters={ROLE_FILTERS}
         activeFilter={roleFilter}
-        onFilter={setRoleFilter}
+        onFilter={(value) => {
+          setRoleFilter(value)
+          setPage(1)
+        }}
       />
 
       {loading ? (
         <TableSkeleton rows={5} cols={6} />
-      ) : users.length === 0 ? (
+      ) : total === 0 && !hasFilters ? (
         <div className="admin-card">
           <EmptyState
             icon={<IconUsers className="w-7 h-7" />}
@@ -220,7 +238,7 @@ export default function Users() {
             description="Registered customers will appear here once they create an account."
           />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : total === 0 ? (
         <div className="admin-card">
           <EmptyState
             icon={<IconUsers className="w-7 h-7" />}
@@ -232,7 +250,7 @@ export default function Users() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns} minWidth={800}>
-              {filtered.map((u) => {
+              {users.map((u) => {
                 const isSelf = u.id === currentUser?.id
                 return (
                   <tr key={u.id} className="group hover:bg-sand/40 transition-colors duration-150">
@@ -286,7 +304,7 @@ export default function Users() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((u) => {
+            {users.map((u) => {
               const isSelf = u.id === currentUser?.id
               return (
                 <article key={u.id} className="admin-card p-4">
@@ -333,6 +351,14 @@ export default function Users() {
               )
             })}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </>
       )}
 

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Seo from "../../components/Seo.jsx";
+import Pagination from "../../components/Pagination.jsx";
 import PageHeader from "../../components/admin/PageHeader.jsx";
 import SearchBar from "../../components/admin/SearchBar.jsx";
 import Badge from "../../components/admin/Badge.jsx";
@@ -9,6 +10,8 @@ import { AdminTable } from "../../components/admin/AdminTable.jsx";
 import { TableSkeleton } from "../../components/admin/Skeleton.jsx";
 import { IconOrders } from "../../components/admin/icons.jsx";
 import { fetchOrdersAdmin } from "../../lib/admin.js";
+import { DEFAULT_PAGE_SIZE } from "../../lib/pagination.js";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue.js";
 
 const STATUS_FILTERS = [
   { value: "all", label: "All" },
@@ -52,68 +55,64 @@ function statusVariant(status) {
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const debouncedQuery = useDebouncedValue(query);
+  const hasFilters = Boolean(debouncedQuery.trim()) || statusFilter !== "all";
 
   useEffect(() => {
     setLoading(true);
-    fetchOrdersAdmin().then(({ orders: rows, error: err }) => {
+    fetchOrdersAdmin({
+      page,
+      pageSize,
+      query: debouncedQuery,
+      status: statusFilter,
+    }).then(({ orders: rows, total: t, error: err }) => {
       setOrders(rows);
+      setTotal(t);
       setError(err ?? "");
       setLoading(false);
     });
-  }, []);
+  }, [page, pageSize, debouncedQuery, statusFilter]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return orders.filter((order) => {
-      if (statusFilter !== "all" && order.status !== statusFilter) return false;
-      if (!q) return true;
-
-      const customer = order.profiles || {};
-      const design = order.designs || {};
-      const hay = [
-        order.id,
-        order.razorpay_order_id,
-        customer.full_name,
-        customer.phone,
-        customer.email,
-        design.name,
-        design.slug,
-        order.status,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return hay.includes(q);
-    });
-  }, [orders, query, statusFilter]);
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setPage(1);
+  };
 
   return (
     <div>
       <Seo title="Orders" noIndex />
       <PageHeader
         title="Orders"
-        description={`${orders.length} order${orders.length === 1 ? "" : "s"} across paid, pending, and failed payments.`}
+        description={`${total} order${total === 1 ? "" : "s"} across paid, pending, and failed payments.`}
       />
 
       {error && <Alert>{error}</Alert>}
 
       <SearchBar
         value={query}
-        onChange={setQuery}
+        onChange={(value) => {
+          setQuery(value);
+          setPage(1);
+        }}
         placeholder="Search by order, payment ref, customer, or design…"
         filters={STATUS_FILTERS}
         activeFilter={statusFilter}
-        onFilter={setStatusFilter}
+        onFilter={(value) => {
+          setStatusFilter(value);
+          setPage(1);
+        }}
       />
 
       {loading ? (
         <TableSkeleton rows={6} cols={7} />
-      ) : orders.length === 0 ? (
+      ) : total === 0 && !hasFilters ? (
         <div className="admin-card">
           <EmptyState
             icon={<IconOrders className="w-7 h-7" />}
@@ -121,7 +120,7 @@ export default function Orders() {
             description="Orders will appear here after customers start completing checkout."
           />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : total === 0 ? (
         <div className="admin-card">
           <EmptyState
             icon={<IconOrders className="w-7 h-7" />}
@@ -133,7 +132,7 @@ export default function Orders() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns} minWidth={880}>
-              {filtered.map((order) => {
+              {orders.map((order) => {
                 const customer = order.profiles || {};
                 const design = order.designs || {};
                 return (
@@ -195,7 +194,7 @@ export default function Orders() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((order) => {
+            {orders.map((order) => {
               const customer = order.profiles || {};
               const design = order.designs || {};
               return (
@@ -260,6 +259,14 @@ export default function Orders() {
               );
             })}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </>
       )}
     </div>

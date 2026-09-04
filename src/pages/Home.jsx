@@ -65,7 +65,7 @@ export default function Home() {
     let active = true;
     Promise.all([
       fetchCategories(),
-      fetchDesigns(),
+      fetchDesigns({ page: 1, pageSize: 30 }),
       fetchActiveCarouselSlides(),
     ]).then(([catRes, desRes, slideRes]) => {
       if (!active) return;

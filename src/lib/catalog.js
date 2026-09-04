@@ -1,5 +1,10 @@
 import { supabase } from './supabaseClient.js'
 import { mockCategories, mockDesigns, mockSubcategories } from '../data/mockCatalog.js'
+import {
+  DEFAULT_PAGE_SIZE,
+  pageRange,
+  sanitizeSearchTerm,
+} from './pagination.js'
 
 /**
  * Every function here checks `supabase` first and runs the real query
@@ -54,28 +59,48 @@ export async function fetchSubcategories(categorySlug) {
 }
 
 /**
- * filters: { categorySlug, subcategorySlug, format, minPrice, maxPrice, query }
+ * filters: {
+ *   categorySlug, subcategorySlug, format, minPrice, maxPrice, query,
+ *   page, pageSize  — pagination (defaults: page 1, size 10)
+ * }
  * All optional. `query` matches name and the 6-digit design_id.
  */
 export async function fetchDesigns(filters = {}) {
-  const { categorySlug, subcategorySlug, format, minPrice, maxPrice, query } = filters
+  const {
+    categorySlug,
+    subcategorySlug,
+    format,
+    minPrice,
+    maxPrice,
+    query,
+    page = 1,
+    pageSize = DEFAULT_PAGE_SIZE,
+  } = filters
 
   if (supabase) {
+    const selectBase =
+      '*, categories(slug, name), subcategories(slug, name), design_types(name)'
     let q = supabase
       .from('designs')
-      .select('*, categories(slug, name), subcategories(slug, name), design_types(name)')
+      .select(selectBase, { count: 'exact' })
       .eq('is_active', true)
 
     if (subcategorySlug) {
       q = supabase
         .from('designs')
-        .select('*, categories(slug, name), subcategories!inner(slug, name), design_types(name)')
+        .select(
+          '*, categories(slug, name), subcategories!inner(slug, name), design_types(name)',
+          { count: 'exact' },
+        )
         .eq('is_active', true)
         .eq('subcategories.slug', subcategorySlug)
     } else if (categorySlug) {
       q = supabase
         .from('designs')
-        .select('*, categories!inner(slug, name), subcategories(slug, name), design_types(name)')
+        .select(
+          '*, categories!inner(slug, name), subcategories(slug, name), design_types(name)',
+          { count: 'exact' },
+        )
         .eq('is_active', true)
         .eq('categories.slug', categorySlug)
     }
@@ -83,18 +108,17 @@ export async function fetchDesigns(filters = {}) {
     if (format) q = q.eq('file_format', format)
     if (minPrice != null) q = q.gte('price', minPrice)
     if (maxPrice != null) q = q.lte('price', maxPrice)
-    if (query) {
-      const term = query.trim()
-      // Escape commas/periods used by PostgREST .or() filter syntax
-      const safe = term.replace(/[,.()]/g, '')
-      if (safe) {
-        q = q.or(`name.ilike.%${safe}%,design_id.ilike.%${safe}%`)
-      }
+    const safe = sanitizeSearchTerm(query)
+    if (safe) {
+      q = q.or(`name.ilike.%${safe}%,design_id.ilike.%${safe}%`)
     }
-    q = q.order('created_at', { ascending: false })
-    const { data, error } = await q
-    if (error) return { designs: [], error: error.message }
-    return { designs: data, error: null }
+
+    const { from, to } = pageRange(page, pageSize)
+    const { data, error, count } = await q
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    if (error) return { designs: [], total: 0, error: error.message }
+    return { designs: data ?? [], total: count ?? 0, error: null }
   }
 
   let results = mockDesigns.filter((d) => d.is_active)
@@ -114,7 +138,9 @@ export async function fetchDesigns(filters = {}) {
     )
   }
   results = [...results].reverse()
-  return { designs: results, error: null }
+  const total = results.length
+  const { from, to } = pageRange(page, pageSize)
+  return { designs: results.slice(from, to + 1), total, error: null }
 }
 
 export async function fetchDesignBySlug(slug) {

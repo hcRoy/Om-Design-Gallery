@@ -1,2 +1,4 @@
 [functions.submit-admission]
-verify_jwt = false
+# Unused by the app (admin createAdmission path). Keep JWT required so
+# anonymous callers cannot hit this service-role intake surface.
+verify_jwt = true

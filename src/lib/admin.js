@@ -1,7 +1,15 @@
 import { supabase } from './supabaseClient.js'
+import {
+  DEFAULT_PAGE_SIZE,
+  pageRange,
+  sanitizeSearchTerm,
+} from './pagination.js'
 
 const NOT_CONFIGURED_ERROR =
   'Supabase isn\u2019t connected yet — admin actions will start working once it is.'
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function startOfDay(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -137,12 +145,18 @@ export async function fetchDashboardStats() {
   }
 }
 
-export async function fetchOrdersAdmin() {
-  if (!supabase) return { orders: [], error: NOT_CONFIGURED_ERROR }
+export async function fetchOrdersAdmin({
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  query = '',
+  status = 'all',
+} = {}) {
+  if (!supabase) return { orders: [], total: 0, error: NOT_CONFIGURED_ERROR }
 
-  const { data, error } = await supabase
+  let q = supabase
     .from('orders')
-    .select(`
+    .select(
+      `
       id,
       amount,
       status,
@@ -158,11 +172,44 @@ export async function fetchOrdersAdmin() {
         name,
         slug
       )
-    `)
-    .order('created_at', { ascending: false })
+    `,
+      { count: 'exact' },
+    )
 
-  if (error) return { orders: [], error: error.message }
-  return { orders: data ?? [], error: null }
+  if (status !== 'all') q = q.eq('status', status)
+
+  const safe = sanitizeSearchTerm(query)
+  if (safe) {
+    const orParts = [`razorpay_order_id.ilike.%${safe}%`]
+    if (UUID_RE.test(safe)) orParts.push(`id.eq.${safe}`)
+
+    const [{ data: profiles }, { data: designs }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id')
+        .or(`full_name.ilike.%${safe}%,phone.ilike.%${safe}%,email.ilike.%${safe}%`)
+        .limit(100),
+      supabase
+        .from('designs')
+        .select('id')
+        .or(`name.ilike.%${safe}%,slug.ilike.%${safe}%`)
+        .limit(100),
+    ])
+
+    const userIds = (profiles ?? []).map((row) => row.id)
+    const designIds = (designs ?? []).map((row) => row.id)
+    if (userIds.length) orParts.push(`user_id.in.(${userIds.join(',')})`)
+    if (designIds.length) orParts.push(`design_id.in.(${designIds.join(',')})`)
+    q = q.or(orParts.join(','))
+  }
+
+  const { from, to } = pageRange(page, pageSize)
+  const { data, error, count } = await q
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (error) return { orders: [], total: 0, error: error.message }
+  return { orders: data ?? [], total: count ?? 0, error: null }
 }
 
 // ---------- Categories ----------
@@ -318,14 +365,38 @@ export async function deleteOffer(id) {
  * Admin sees every design regardless of `is_active`, unlike the public
  * catalog (`fetchDesigns` in catalog.js), which filters to active-only.
  */
-export async function fetchAllDesigns() {
-  if (!supabase) return { designs: [], error: NOT_CONFIGURED_ERROR }
-  const { data, error } = await supabase
+export async function fetchAllDesigns({
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  query = '',
+  status = 'all',
+} = {}) {
+  if (!supabase) return { designs: [], total: 0, error: NOT_CONFIGURED_ERROR }
+
+  let q = supabase
     .from('designs')
-    .select('*, categories(name), subcategories(name, slug, category_id), design_types(id, name, is_active)')
+    .select(
+      '*, categories(name), subcategories(name, slug, category_id), design_types(id, name, is_active)',
+      { count: 'exact' },
+    )
+
+  if (status === 'active') q = q.eq('is_active', true)
+  if (status === 'draft') q = q.eq('is_active', false)
+
+  const safe = sanitizeSearchTerm(query)
+  if (safe) {
+    q = q.or(
+      `name.ilike.%${safe}%,design_id.ilike.%${safe}%,slug.ilike.%${safe}%`,
+    )
+  }
+
+  const { from, to } = pageRange(page, pageSize)
+  const { data, error, count } = await q
     .order('created_at', { ascending: false })
-  if (error) return { designs: [], error: error.message }
-  return { designs: data, error: null }
+    .range(from, to)
+
+  if (error) return { designs: [], total: 0, error: error.message }
+  return { designs: data ?? [], total: count ?? 0, error: null }
 }
 
 export async function createDesign(payload) {
@@ -376,14 +447,70 @@ export async function uploadDesignFile(file) {
 
 // ---------- Admissions ----------
 
-export async function fetchAllAdmissions() {
-  if (!supabase) return { admissions: [], error: NOT_CONFIGURED_ERROR }
-  const { data, error } = await supabase
-    .from('admissions')
-    .select('*')
+export async function fetchAdmissionStatusCounts() {
+  if (!supabase) {
+    return {
+      counts: { all: 0, pending: 0, reviewed: 0, enrolled: 0, rejected: 0 },
+      error: NOT_CONFIGURED_ERROR,
+    }
+  }
+
+  const statuses = ['pending', 'reviewed', 'enrolled', 'rejected']
+  const [allRes, ...statusRes] = await Promise.all([
+    supabase.from('admissions').select('*', { count: 'exact', head: true }),
+    ...statuses.map((status) =>
+      supabase
+        .from('admissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', status),
+    ),
+  ])
+
+  const firstError = [allRes, ...statusRes].find((row) => row.error)?.error
+  if (firstError) {
+    return {
+      counts: { all: 0, pending: 0, reviewed: 0, enrolled: 0, rejected: 0 },
+      error: firstError.message,
+    }
+  }
+
+  const counts = { all: allRes.count ?? 0 }
+  statuses.forEach((status, index) => {
+    counts[status] = statusRes[index].count ?? 0
+  })
+  return { counts, error: null }
+}
+
+export async function fetchAllAdmissions({
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  query = '',
+  status = 'all',
+} = {}) {
+  if (!supabase) return { admissions: [], total: 0, error: NOT_CONFIGURED_ERROR }
+
+  let q = supabase.from('admissions').select('*', { count: 'exact' })
+  if (status !== 'all') q = q.eq('status', status)
+
+  const safe = sanitizeSearchTerm(query)
+  if (safe) {
+    const orParts = [
+      `student_name.ilike.%${safe}%`,
+      `student_mobile.ilike.%${safe}%`,
+      `current_address.ilike.%${safe}%`,
+      `reference_details.ilike.%${safe}%`,
+    ]
+    if (/^\d+$/.test(safe)) orParts.push(`form_number.eq.${Number(safe)}`)
+    q = q.or(orParts.join(','))
+  }
+
+  const { from, to } = pageRange(page, pageSize)
+  const { data, error, count } = await q
     .order('submitted_at', { ascending: false })
-  if (error) return { admissions: [], error: error.message }
-  return { admissions: data ?? [], error: null }
+    .range(from, to)
+
+  if (error) return { admissions: [], total: 0, error: error.message }
+  return { admissions: data ?? [], total: count ?? 0, error: null }
 }
 
 export async function fetchAdmissionById(id) {
@@ -579,14 +706,31 @@ export async function createAdmission(payload) {
 
 // ---------- Users ----------
 
-export async function fetchUsers() {
-  if (!supabase) return { users: [], error: NOT_CONFIGURED_ERROR }
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
+export async function fetchUsers({
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  query = '',
+  role = 'all',
+} = {}) {
+  if (!supabase) return { users: [], total: 0, error: NOT_CONFIGURED_ERROR }
+
+  let q = supabase.from('profiles').select('*', { count: 'exact' })
+  if (role !== 'all') q = q.eq('role', role)
+
+  const safe = sanitizeSearchTerm(query)
+  if (safe) {
+    q = q.or(
+      `full_name.ilike.%${safe}%,phone.ilike.%${safe}%,email.ilike.%${safe}%`,
+    )
+  }
+
+  const { from, to } = pageRange(page, pageSize)
+  const { data, error, count } = await q
     .order('created_at', { ascending: false })
-  if (error) return { users: [], error: error.message }
-  return { users: data, error: null }
+    .range(from, to)
+
+  if (error) return { users: [], total: 0, error: error.message }
+  return { users: data ?? [], total: count ?? 0, error: null }
 }
 
 export async function updateUserRole(userId, role) {

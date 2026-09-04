@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../components/Modal.jsx";
+import Pagination from "../../components/Pagination.jsx";
 import Seo from "../../components/Seo.jsx";
 import { useToast } from "../../context/ToastContext.jsx";
 import { useAdminFormModal } from "../../hooks/useAdminFormModal.js";
+import { useClientPagination } from "../../hooks/useClientPagination.js";
 import {
   fetchAllOffers,
   createOffer,
@@ -126,6 +128,11 @@ export default function Offers() {
         .includes(q);
     });
   }, [offers, query, statusFilter]);
+
+  const { pageItems, page, setPage, pageSize, setPageSize, total } =
+    useClientPagination(filtered, {
+      resetKey: `${query}|${statusFilter}`,
+    });
 
   const openEdit = (offer) => {
     openEditModal(offer.id, {
@@ -262,7 +269,7 @@ export default function Offers() {
         <>
           <div className="hidden md:block">
             <AdminTable columns={tableColumns} minWidth={720}>
-              {filtered.map((offer) => (
+              {pageItems.map((offer) => (
                 <tr
                   key={offer.id}
                   className="group hover:bg-sand/40 transition-colors duration-150"
@@ -305,7 +312,7 @@ export default function Offers() {
           </div>
 
           <div className="md:hidden space-y-3">
-            {filtered.map((offer) => (
+            {pageItems.map((offer) => (
               <article key={offer.id} className="admin-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -337,6 +344,14 @@ export default function Offers() {
               </article>
             ))}
           </div>
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </>
       )}
 

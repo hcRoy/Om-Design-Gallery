@@ -1,10 +1,13 @@
 import { supabase } from './supabaseClient.js'
 import { validatePassword } from './password.js'
+import { callEdgeFunction } from './razorpay.js'
 
 const NOT_CONFIGURED_ERROR =
   'Supabase isn\u2019t connected yet — add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file to enable login.'
 
 const GENERIC_LOGIN_ERROR = 'Invalid email/mobile or password.'
+const GENERIC_SIGNUP_ERROR =
+  'Could not create the account. If you already have an account, try signing in or resetting your password.'
 
 export function normalizePhone(input) {
   const raw = String(input ?? '').trim()
@@ -32,21 +35,6 @@ export function isValidIndianMobile(input) {
 function authRedirectUrl(path) {
   if (typeof window === 'undefined') return undefined
   return `${window.location.origin}${path}`
-}
-
-async function resolveLoginEmail(identifier) {
-  const value = String(identifier ?? '').trim()
-  if (!value || value.includes('@')) return null
-
-  const { data: rpcEmail, error: rpcError } = await supabase.rpc('lookup_email_by_phone', {
-    phone_input: value,
-  })
-
-  if (!rpcError && rpcEmail) {
-    return String(rpcEmail).trim().toLowerCase()
-  }
-
-  return null
 }
 
 export async function signUp({ fullName, phone, email, password }) {
@@ -82,10 +70,8 @@ export async function signUp({ fullName, phone, email, password }) {
   })
 
   if (error) {
-    const message = error.message?.toLowerCase().includes('already registered')
-      ? 'An account with this email already exists. Try signing in.'
-      : error.message
-    return { session: null, user: null, needsConfirmation: false, error: message }
+    // Avoid confirming whether the email is already registered.
+    return { session: null, user: null, needsConfirmation: false, error: GENERIC_SIGNUP_ERROR }
   }
 
   const needsConfirmation = Boolean(data.user && !data.session)
@@ -106,37 +92,51 @@ export async function signIn({ identifier, password }) {
     return { error: GENERIC_LOGIN_ERROR }
   }
 
-  let credentials
-
   if (trimmedId.includes('@')) {
     if (!isValidEmail(trimmedId)) {
       return { error: GENERIC_LOGIN_ERROR }
     }
-    credentials = { email: trimmedId.toLowerCase() }
-  } else {
-    const phone = normalizePhone(trimmedId)
-    if (!isValidIndianMobile(trimmedId)) {
-      return { error: GENERIC_LOGIN_ERROR }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: trimmedId.toLowerCase(),
+      password,
+    })
+
+    if (error) {
+      return { session: null, error: GENERIC_LOGIN_ERROR }
     }
 
-    const email = await resolveLoginEmail(trimmedId)
-    if (email) {
-      credentials = { email }
-    } else {
-      credentials = { phone }
-    }
+    return { session: data.session ?? null, error: null }
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    ...credentials,
-    password,
-  })
+  if (!isValidIndianMobile(trimmedId)) {
+    return { error: GENERIC_LOGIN_ERROR }
+  }
 
-  if (error) {
+  // Phone → email resolution stays server-side (no public lookup_email_by_phone RPC).
+  try {
+    const result = await callEdgeFunction('sign-in-with-phone', {
+      phone: trimmedId,
+      password,
+    })
+
+    if (!result?.session) {
+      return { session: null, error: GENERIC_LOGIN_ERROR }
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: result.session.access_token,
+      refresh_token: result.session.refresh_token,
+    })
+
+    if (sessionError) {
+      return { session: null, error: GENERIC_LOGIN_ERROR }
+    }
+
+    return { session: result.session, error: null }
+  } catch {
     return { session: null, error: GENERIC_LOGIN_ERROR }
   }
-
-  return { session: data.session ?? null, error: null }
 }
 
 export async function requestPasswordReset(email) {
@@ -188,7 +188,8 @@ export async function fetchProfile(userId) {
 
 export async function updateProfile(userId, updates) {
   if (!supabase) return { error: NOT_CONFIGURED_ERROR }
-  const { wallet_balance: _ignored, ...safeUpdates } = updates || {}
+  // Never allow the client to write wallet_balance or role.
+  const { wallet_balance: _w, role: _r, ...safeUpdates } = updates || {}
   const { data, error } = await supabase
     .from('profiles')
     .update({ ...safeUpdates, updated_at: new Date().toISOString() })

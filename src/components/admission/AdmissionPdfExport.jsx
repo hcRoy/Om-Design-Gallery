@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import AdmissionPrintDocument from './AdmissionPrintDocument.jsx'
-import { admissionPdfFilename, downloadAdmissionPdf } from '../../lib/admissionPdf.js'
 
 /**
  * Off-screen print template + download handler for admission PDF export.
+ * html2canvas/jsPDF are loaded only when download is clicked to keep the
+ * admission detail route chunk small.
  */
 export default function AdmissionPdfExport({
   admission,
@@ -22,6 +23,9 @@ export default function AdmissionPdfExport({
     if (!pdfRef.current || !admission) return
     setDownloading(true)
     try {
+      const { admissionPdfFilename, downloadAdmissionPdf } = await import(
+        '../../lib/admissionPdf.js'
+      )
       await downloadAdmissionPdf(
         pdfRef.current,
         admissionPdfFilename(admission),

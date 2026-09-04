@@ -85,10 +85,15 @@ serve(async (req) => {
     return jsonResponse({ error: "Invalid request body" }, 400);
   }
 
-  // Honeypot — bots only; real users never see this field.
-  if (body.website && String(body.website).trim()) {
-    return jsonResponse({ success: true, form_number: null });
-  }
+        if (body.website && String(body.website).trim()) {
+          return jsonResponse({ success: true, form_number: null });
+        }
+
+        // Disabled for public use — admissions are created via the admin panel.
+        return jsonResponse(
+          { error: "Public admission intake is disabled. Use the admin admissions form." },
+          410,
+        );
 
   const studentName = String(body.student_name ?? "").trim();
   const mobile = normalizeMobile(body.student_mobile ?? "");

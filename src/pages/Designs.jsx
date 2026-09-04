@@ -3,11 +3,13 @@ import { useSearchParams, useLocation } from 'react-router-dom'
 import Card from '../components/Card.jsx'
 import WishlistButton from '../components/WishlistButton.jsx'
 import Seo from '../components/Seo.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { stripHtml } from '../lib/html.js'
+import { DEFAULT_PAGE_SIZE } from '../lib/pagination.js'
 import { fetchCategories, fetchDesigns, fetchSubcategories, FILE_FORMATS } from '../lib/catalog.js'
 
 /**
- * Filters live in the URL (?category=&subcategory=&format=&min=&max=&q=)
+ * Filters live in the URL (?category=&subcategory=&format=&min=&max=&q=&page=)
  * rather than component state, so a filtered view is shareable/bookmarkable
  * and category / subcategory cards can link straight into a pre-filtered
  * result.
@@ -18,6 +20,7 @@ export default function Designs() {
   const [categories, setCategories] = useState([])
   const [subcategories, setSubcategories] = useState([])
   const [designs, setDesigns] = useState([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -27,6 +30,8 @@ export default function Designs() {
   const minPrice = params.get('min') || ''
   const maxPrice = params.get('max') || ''
   const query = params.get('q') || ''
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  const pageSize = Math.max(1, Number(params.get('pageSize')) || DEFAULT_PAGE_SIZE)
 
   const [searchInput, setSearchInput] = useState(query)
 
@@ -51,17 +56,21 @@ export default function Designs() {
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       query: query || undefined,
-    }).then(({ designs: d }) => {
+      page,
+      pageSize,
+    }).then(({ designs: d, total: t }) => {
       setDesigns(d)
+      setTotal(t ?? 0)
       setLoading(false)
     })
-  }, [categorySlug, subcategorySlug, format, minPrice, maxPrice, query])
+  }, [categorySlug, subcategorySlug, format, minPrice, maxPrice, query, page, pageSize])
 
   const updateParam = useCallback(
     (key, value) => {
       const next = new URLSearchParams(params)
       if (value) next.set(key, value)
       else next.delete(key)
+      if (key !== 'page' && key !== 'pageSize') next.delete('page')
       setParams(next, { replace: true })
     },
     [params, setParams],
@@ -72,12 +81,25 @@ export default function Designs() {
     if (slug) next.set('category', slug)
     else next.delete('category')
     next.delete('subcategory')
+    next.delete('page')
     setParams(next, { replace: true })
   }
 
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     updateParam('q', searchInput)
+  }
+
+  const setPage = (nextPage) => {
+    updateParam('page', nextPage > 1 ? String(nextPage) : '')
+  }
+
+  const setPageSize = (nextSize) => {
+    const next = new URLSearchParams(params)
+    if (nextSize === DEFAULT_PAGE_SIZE) next.delete('pageSize')
+    else next.set('pageSize', String(nextSize))
+    next.delete('page')
+    setParams(next, { replace: true })
   }
 
   const activeCategory = useMemo(
@@ -276,7 +298,7 @@ export default function Designs() {
                 <div key={i} className="aspect-[4/5] bg-sand rounded-sm animate-pulse" />
               ))}
             </div>
-          ) : designs.length === 0 ? (
+          ) : total === 0 ? (
             <div className="text-center py-16">
               <p className="text-ink-soft">No designs match those filters.</p>
               <button
@@ -289,7 +311,7 @@ export default function Designs() {
           ) : (
             <>
               <p className="text-sm text-ink-soft mb-6">
-                {designs.length} {designs.length === 1 ? 'design' : 'designs'}
+                {total} {total === 1 ? 'design' : 'designs'}
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {designs.map((d) => (
@@ -312,6 +334,13 @@ export default function Designs() {
                   />
                 ))}
               </div>
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
             </>
           )}
         </div>
