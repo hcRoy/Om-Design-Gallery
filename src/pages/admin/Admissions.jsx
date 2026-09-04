@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../../components/Seo.jsx";
 import Pagination from "../../components/Pagination.jsx";
@@ -209,7 +209,9 @@ export default function Admissions() {
                   {formatSubmitted(row.submitted_at)}
                 </td>
                 <td className="px-4 py-3.5">
-                  <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
+                  <Badge variant={statusVariant(row.status)}>
+                    {row.status}
+                  </Badge>
                 </td>
                 <td className="px-4 py-3.5 text-right">
                   <Link
