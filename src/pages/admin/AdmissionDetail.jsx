@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Modal from '../../components/Modal.jsx'
 import Seo from '../../components/Seo.jsx'
 import Alert from '../../components/admin/Alert.jsx'
+import Badge from '../../components/admin/Badge.jsx'
+import ConfirmDialog from '../../components/admin/ConfirmDialog.jsx'
 import PageHeader from '../../components/admin/PageHeader.jsx'
 import { IconArrowLeft } from '../../components/admin/icons.jsx'
 import AdmissionPrintDocument from '../../components/admission/AdmissionPrintDocument.jsx'
 import AdmissionPdfExport from '../../components/admission/AdmissionPdfExport.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
 import { useToast } from '../../context/ToastContext.jsx'
 import {
   fetchAdmissionById,
@@ -14,11 +17,21 @@ import {
   createAdmissionInstallment,
   updateAdmissionInstallment,
   deleteAdmissionInstallment,
+  deleteAdmission,
   getAdmissionAssetSignedUrl,
   getAdmissionAssetSignedUrls,
 } from '../../lib/admin.js'
+import { canDeleteAdmissions, canEditAdmissions } from '../../lib/roles.js'
 
 const STATUS_OPTIONS = ['pending', 'reviewed', 'enrolled', 'rejected']
+
+function statusVariant(status) {
+  if (status === 'pending') return 'pending'
+  if (status === 'reviewed') return 'reviewed'
+  if (status === 'enrolled') return 'enrolled'
+  if (status === 'rejected') return 'rejected'
+  return 'draft'
+}
 
 function FieldRow({ label, value }) {
   return (
@@ -32,7 +45,12 @@ function FieldRow({ label, value }) {
 export default function AdmissionDetail() {
   const { id } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
+  const { profile } = useAuth()
   const { showToast } = useToast()
+  const canEdit = canEditAdmissions(profile?.role)
+  const canDelete = canDeleteAdmissions(profile?.role)
+
   const [admission, setAdmission] = useState(null)
   const [installments, setInstallments] = useState([])
   const [photoUrl, setPhotoUrl] = useState(null)
@@ -43,6 +61,8 @@ export default function AdmissionDetail() {
   const [statusSaving, setStatusSaving] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [pdfLanguage, setPdfLanguage] = useState('gu')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -90,6 +110,7 @@ export default function AdmissionDetail() {
   }, [location.state?.justCreated, showToast])
 
   const handleStatusChange = async (e) => {
+    if (!canEdit) return
     const status = e.target.value
     setStatusSaving(true)
     const { admission: updated, error: err } = await updateAdmission(id, { status })
@@ -103,6 +124,7 @@ export default function AdmissionDetail() {
   }
 
   const handleAddInstallment = async () => {
+    if (!canEdit) return
     const { installment, error: err } = await createAdmissionInstallment(id, {
       sort_order: installments.length,
       installment_date: null,
@@ -117,12 +139,14 @@ export default function AdmissionDetail() {
   }
 
   const handleInstallmentChange = async (rowId, field, value) => {
+    if (!canEdit) return
     setInstallments((rows) =>
       rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
     )
   }
 
   const saveInstallment = async (row) => {
+    if (!canEdit) return
     const payload = {
       installment_date: row.installment_date || null,
       amount: row.amount === '' || row.amount == null ? null : Number(row.amount),
@@ -138,6 +162,7 @@ export default function AdmissionDetail() {
   }
 
   const removeInstallment = async (rowId) => {
+    if (!canEdit) return
     const { error: err } = await deleteAdmissionInstallment(rowId)
     if (err) {
       showToast(err, { type: 'error' })
@@ -145,6 +170,20 @@ export default function AdmissionDetail() {
     }
     setInstallments((rows) => rows.filter((r) => r.id !== rowId))
     showToast('Installment removed', { type: 'success' })
+  }
+
+  const handleDelete = async () => {
+    if (!canDelete) return
+    setDeleting(true)
+    const { error: err } = await deleteAdmission(id)
+    setDeleting(false)
+    setConfirmDelete(false)
+    if (err) {
+      showToast(err, { type: 'error' })
+      return
+    }
+    showToast('Admission deleted', { type: 'success' })
+    navigate('/admin/admissions', { replace: true })
   }
 
   if (loading) {
@@ -192,16 +231,37 @@ export default function AdmissionDetail() {
             description={`Form #${admission.form_number ?? '—'} · ${admission.student_mobile}`}
             action={
               <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={admission.status}
-                  disabled={statusSaving}
-                  onChange={handleStatusChange}
-                  className="border border-ink/15 rounded-xl px-3 py-2 text-sm bg-white"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                {canEdit ? (
+                  <select
+                    value={admission.status}
+                    disabled={statusSaving}
+                    onChange={handleStatusChange}
+                    className="border border-ink/15 rounded-xl px-3 py-2 text-sm bg-white"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Badge variant={statusVariant(admission.status)}>{admission.status}</Badge>
+                )}
+                {canEdit && (
+                  <Link
+                    to={`/admin/admissions/${id}/edit`}
+                    className="btn-outline !text-xs !py-2"
+                  >
+                    Edit
+                  </Link>
+                )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    className="btn-danger !text-xs !py-2 !rounded-sm"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    Delete
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-primary !text-xs !py-2"
@@ -278,14 +338,20 @@ export default function AdmissionDetail() {
           <div className="mt-8 bg-white rounded-xl border border-ink/8 p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="text-sm font-bold uppercase tracking-wide text-ink-soft">Fee installments</h2>
-              <button type="button" className="btn-secondary !text-xs !py-2" onClick={handleAddInstallment}>
-                Add row
-              </button>
+              {canEdit && (
+                <button type="button" className="btn-secondary !text-xs !py-2" onClick={handleAddInstallment}>
+                  Add row
+                </button>
+              )}
             </div>
 
             {installments.length === 0 ? (
-              <p className="text-sm text-ink-soft">No installments recorded yet. Add rows as payments are collected.</p>
-            ) : (
+              <p className="text-sm text-ink-soft">
+                {canEdit
+                  ? 'No installments recorded yet. Add rows as payments are collected.'
+                  : 'No installments recorded yet.'}
+              </p>
+            ) : canEdit ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -348,6 +414,29 @@ export default function AdmissionDetail() {
                   </tbody>
                 </table>
               </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase text-ink-soft border-b border-ink/10">
+                      <th className="py-2 pr-3">Date</th>
+                      <th className="py-2 pr-3">Amount</th>
+                      <th className="py-2">Received by</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {installments.map((row) => (
+                      <tr key={row.id} className="border-b border-ink/5">
+                        <td className="py-2 pr-3">{row.installment_date || '—'}</td>
+                        <td className="py-2 pr-3 tabular-nums">
+                          {row.amount != null ? `₹${row.amount}` : '—'}
+                        </td>
+                        <td className="py-2">{row.received_by || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
@@ -396,6 +485,16 @@ export default function AdmissionDetail() {
               />
             </div>
           </Modal>
+
+          <ConfirmDialog
+            open={confirmDelete}
+            onClose={() => !deleting && setConfirmDelete(false)}
+            onConfirm={handleDelete}
+            title="Delete admission"
+            description={`Permanently delete form #${admission.form_number ?? ''} for ${admission.student_name}? This cannot be undone.`}
+            confirmLabel="Delete"
+            loading={deleting}
+          />
         </>
       )}
     </AdmissionPdfExport>

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import BrandMark from '../../components/BrandMark.jsx'
 import Seo from '../../components/Seo.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { isAdmin, isStaff, roleLabel } from '../../lib/roles.js'
 import {
   IconDashboard,
   IconPackage,
@@ -20,23 +21,23 @@ import {
   IconX,
 } from '../../components/admin/icons.jsx'
 
-const navItems = [
-  { to: '/admin', label: 'Dashboard', end: true, icon: IconDashboard },
-  { to: '/admin/products', label: 'Products', icon: IconPackage },
-  { to: '/admin/categories', label: 'Categories', icon: IconFolder },
-  { to: '/admin/subcategories', label: 'Subcategories', icon: IconLayers },
-  { to: '/admin/admissions', label: 'Admissions', icon: IconFile },
-  { to: '/admin/design-types', label: 'Design Types', icon: IconShapes },
-  { to: '/admin/offers', label: 'Offers', icon: IconTag },
-  { to: '/admin/carousel', label: 'Carousel', icon: IconImage },
-  { to: '/admin/users', label: 'Users', icon: IconUsers },
-  { to: '/admin/orders', label: 'Orders', icon: IconOrders },
+const allNavItems = [
+  { to: '/admin', label: 'Dashboard', end: true, icon: IconDashboard, adminOnly: true },
+  { to: '/admin/products', label: 'Products', icon: IconPackage, adminOnly: true },
+  { to: '/admin/categories', label: 'Categories', icon: IconFolder, adminOnly: true },
+  { to: '/admin/subcategories', label: 'Subcategories', icon: IconLayers, adminOnly: true },
+  { to: '/admin/admissions', label: 'Admissions', icon: IconFile, adminOnly: false },
+  { to: '/admin/design-types', label: 'Design Types', icon: IconShapes, adminOnly: true },
+  { to: '/admin/offers', label: 'Offers', icon: IconTag, adminOnly: true },
+  { to: '/admin/carousel', label: 'Carousel', icon: IconImage, adminOnly: true },
+  { to: '/admin/users', label: 'Users', icon: IconUsers, adminOnly: true },
+  { to: '/admin/orders', label: 'Orders', icon: IconOrders, adminOnly: true },
 ]
 
-function NavList({ onNavigate }) {
+function NavList({ items, onNavigate }) {
   return (
     <nav className="flex flex-col gap-1">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const Icon = item.icon
         return (
           <NavLink
@@ -62,14 +63,15 @@ function NavList({ onNavigate }) {
   )
 }
 
-function Brand({ stacked = false }) {
-  return <BrandMark compact subtitle="Admin" stacked={stacked} />
+function Brand({ stacked = false, subtitle = 'Admin' }) {
+  return <BrandMark compact subtitle={subtitle} stacked={stacked} />
 }
 
 function SidebarFooter() {
   const { profile, user } = useAuth()
-  const name = profile?.full_name || user?.phone || 'Admin'
-  const initial = (name.trim()[0] || 'A').toUpperCase()
+  const name = profile?.full_name || user?.phone || 'User'
+  const initial = (name.trim()[0] || 'U').toUpperCase()
+  const label = roleLabel(profile?.role)
 
   return (
     <div className="mt-auto pt-6 border-t border-ink/8">
@@ -79,7 +81,7 @@ function SidebarFooter() {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ink truncate">{name}</p>
-          <p className="text-[11px] text-ink-soft">Administrator</p>
+          <p className="text-[11px] text-ink-soft">{label}</p>
         </div>
       </div>
       <Link
@@ -97,6 +99,17 @@ function SidebarFooter() {
 export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const { profile } = useAuth()
+  const admin = isAdmin(profile?.role)
+  const staff = isStaff(profile?.role)
+
+  const navItems = useMemo(
+    () => allNavItems.filter((item) => admin || !item.adminOnly),
+    [admin],
+  )
+
+  const brandSubtitle = staff && !admin ? 'Staff' : 'Admin'
+  const seoTitle = staff && !admin ? 'Admissions' : 'Admin'
 
   const closeMobile = () => setMobileOpen(false)
   const toggleMobile = () => setMobileOpen((v) => !v)
@@ -116,25 +129,21 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-sand flex">
-      <Seo title="Admin" noIndex />
+      <Seo title={seoTitle} noIndex />
 
       <aside className="hidden lg:flex w-[252px] shrink-0 sticky top-0 h-screen flex-col bg-ivory border-r border-ink/8 px-3 py-5">
         <div className="mb-6 min-w-0 max-w-full">
-          <Brand stacked />
+          <Brand stacked subtitle={brandSubtitle} />
         </div>
-        <NavList />
+        <NavList items={navItems} />
         <SidebarFooter />
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {/*
-          Keep mobile header above the drawer (z-50 > z-40) so the menu/close
-          button stays clickable while the sidebar is open.
-        */}
         <header className="lg:hidden sticky top-0 z-50 bg-ivory/95 backdrop-blur border-b border-ink/8">
           <div className="flex items-center justify-between gap-2 px-3 min-h-14 py-1">
             <div className="min-w-0 flex-1 overflow-hidden">
-              <Brand />
+              <Brand subtitle={brandSubtitle} />
             </div>
             <button
               type="button"
@@ -171,11 +180,11 @@ export default function AdminLayout() {
                 className="relative z-10 w-[min(280px,86vw)] h-full bg-ivory border-r border-ink/8 px-3 py-5 flex flex-col shadow-xl"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Admin menu"
+                aria-label="Office menu"
               >
                 <div className="flex items-start justify-between gap-2 mb-6">
                   <div className="min-w-0 flex-1 overflow-hidden pr-1">
-                    <Brand stacked />
+                    <Brand stacked subtitle={brandSubtitle} />
                   </div>
                   <button
                     type="button"
@@ -187,7 +196,7 @@ export default function AdminLayout() {
                     <IconX className="w-4 h-4" />
                   </button>
                 </div>
-                <NavList onNavigate={closeMobile} />
+                <NavList items={navItems} onNavigate={closeMobile} />
                 <SidebarFooter />
               </motion.aside>
             </motion.div>

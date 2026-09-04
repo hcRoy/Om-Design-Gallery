@@ -543,8 +543,25 @@ export async function updateAdmission(id, payload) {
 
 export async function deleteAdmission(id) {
   if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+
+  const { data: row, error: fetchErr } = await supabase
+    .from('admissions')
+    .select('student_photo_url, student_signature_url, aadhaar_card_urls')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchErr) return { error: fetchErr.message }
+
+  const paths = [
+    row?.student_photo_url,
+    row?.student_signature_url,
+    ...(row?.aadhaar_card_urls ?? []),
+  ].filter(Boolean)
+
   const { error } = await supabase.from('admissions').delete().eq('id', id)
-  return { error: error?.message ?? null }
+  if (error) return { error: error.message }
+
+  if (paths.length) await removeAdmissionAssets(paths)
+  return { error: null }
 }
 
 export async function createAdmissionInstallment(admissionId, payload) {
@@ -735,6 +752,9 @@ export async function fetchUsers({
 
 export async function updateUserRole(userId, role) {
   if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+  if (!['customer', 'admin', 'staff'].includes(role)) {
+    return { error: 'Invalid role' }
+  }
   const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
   return { error: error?.message ?? null }
 }

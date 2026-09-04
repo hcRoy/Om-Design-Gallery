@@ -3,6 +3,7 @@ const variants = {
   draft: 'bg-ink/[0.06] text-ink-soft ring-ink/10',
   featured: 'bg-gold-light/50 text-gold-dark ring-gold/25',
   admin: 'bg-maroon/10 text-maroon ring-maroon/15',
+  staff: 'bg-teal/10 text-teal ring-teal/20',
   customer: 'bg-sand text-ink-soft ring-ink/10',
   format: 'bg-ivory text-ink ring-ink/10',
   paid: 'bg-teal/10 text-teal ring-teal/15',

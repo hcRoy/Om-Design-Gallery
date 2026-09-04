@@ -1,17 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  signIn,
-  signUp,
-  requestPasswordReset,
-  isValidEmail,
-  isValidIndianMobile,
-} from '../lib/auth.js'
+import { fetchProfile, signIn, signUp, requestPasswordReset, isValidEmail, isValidIndianMobile } from '../lib/auth.js'
 import { validatePassword, passwordsMatch } from '../lib/password.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import Seo from '../components/Seo.jsx'
 import BrandMark from '../components/BrandMark.jsx'
+import { defaultPathForRole } from '../lib/roles.js'
 
 const inputClass =
   'w-full border border-ink/15 rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-maroon'
@@ -25,13 +20,18 @@ export default function Login() {
   const { configured } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const redirectTo = location.state?.from ?? '/account'
+  const explicitFrom = location.state?.from
   const resetSuccess = location.state?.resetSuccess
+  const routeNotice = location.state?.notice
 
   const [tab, setTab] = useState('login')
   const [view, setView] = useState('main')
   const [error, setError] = useState('')
-  const [info, setInfo] = useState(resetSuccess ? 'Your password was updated. Sign in with your new password.' : '')
+  const [info, setInfo] = useState(
+    resetSuccess
+      ? 'Your password was updated. Sign in with your new password.'
+      : routeNotice || '',
+  )
   const [busy, setBusy] = useState(false)
 
   const [loginForm, setLoginForm] = useState({ identifier: '', password: '' })
@@ -57,7 +57,7 @@ export default function Login() {
     setInfo('')
     setBusy(true)
 
-    const { error: err } = await signIn({
+    const { session, error: err } = await signIn({
       identifier: loginForm.identifier,
       password: loginForm.password,
     })
@@ -67,7 +67,13 @@ export default function Login() {
       setError(err)
       return
     }
-    navigate(redirectTo, { replace: true })
+
+    let dest = explicitFrom
+    if (!dest && session?.user?.id) {
+      const { profile } = await fetchProfile(session.user.id)
+      dest = defaultPathForRole(profile?.role)
+    }
+    navigate(dest || '/account', { replace: true })
   }
 
   const handleSignup = async (e) => {
@@ -127,7 +133,7 @@ export default function Login() {
     }
 
     if (session) {
-      navigate(redirectTo, { replace: true })
+      navigate(explicitFrom || '/account', { replace: true })
     }
   }
 
@@ -229,7 +235,10 @@ export default function Login() {
         )}
 
         {info && (
-          <div className="mb-6 text-sm bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-sm px-4 py-3">
+          <div
+            role="status"
+            className="mb-6 text-sm bg-sand border border-gold/40 text-ink rounded-sm px-4 py-3"
+          >
             {info}
           </div>
         )}

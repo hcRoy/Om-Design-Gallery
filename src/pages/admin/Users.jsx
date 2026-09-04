@@ -7,6 +7,7 @@ import Modal from '../../components/Modal.jsx'
 import { fetchUsers, updateUserRole, creditUserWallet } from '../../lib/admin.js'
 import { DEFAULT_PAGE_SIZE } from '../../lib/pagination.js'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js'
+import { roleLabel } from '../../lib/roles.js'
 import PageHeader from '../../components/admin/PageHeader.jsx'
 import SearchBar from '../../components/admin/SearchBar.jsx'
 import Badge from '../../components/admin/Badge.jsx'
@@ -30,6 +31,7 @@ import { IconUsers, IconChevronDown } from '../../components/admin/icons.jsx'
 const ROLE_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'admin', label: 'Admins' },
+  { value: 'staff', label: 'Staff' },
   { value: 'customer', label: 'Customers' },
 ]
 
@@ -75,6 +77,7 @@ function RoleSelect({ value, disabled, title, busy, onChange }) {
                    disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <option value="customer">Customer</option>
+        <option value="staff">Staff</option>
         <option value="admin">Admin</option>
       </select>
       <IconChevronDown className="w-3.5 h-3.5 text-ink-soft pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
@@ -142,7 +145,7 @@ export default function Users() {
       showToast(err, { type: 'error' })
       return
     }
-    showToast(`${u.full_name || u.phone} is now ${nextRole === 'admin' ? 'an admin' : 'a customer'}.`, {
+    showToast(`${u.full_name || u.phone} is now ${roleLabel(nextRole).toLowerCase()}.`, {
       type: 'success',
     })
     load()
@@ -208,7 +211,7 @@ export default function Users() {
       <Seo title="Users" noIndex />
       <PageHeader
         title="Users"
-        description={`${total} registered account${total === 1 ? '' : 's'}. Promote carefully — admin access is unrestricted.`}
+        description={`${total} registered account${total === 1 ? '' : 's'}. Promote carefully — admin access is unrestricted; staff can only manage admissions.`}
       />
 
       {error && <Alert>{error}</Alert>}
@@ -286,11 +289,13 @@ export default function Users() {
                       </button>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
-                      <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>{u.role}</Badge>
+                      <Badge variant={u.role === 'admin' ? 'admin' : u.role === 'staff' ? 'staff' : 'customer'}>
+                        {roleLabel(u.role)}
+                      </Badge>
                     </td>
                     <ActionsCell className="text-right">
                       <RoleSelect
-                        value={u.role === 'admin' ? 'admin' : 'customer'}
+                        value={['admin', 'staff', 'customer'].includes(u.role) ? u.role : 'customer'}
                         disabled={isSelf}
                         busy={busyId === u.id}
                         title={isSelf ? "You can't change your own role here" : undefined}
@@ -327,7 +332,9 @@ export default function Users() {
                         {formatMoney(u.wallet_balance)}
                       </p>
                       <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
-                        <Badge variant={u.role === 'admin' ? 'admin' : 'customer'}>{u.role}</Badge>
+                        <Badge variant={u.role === 'admin' ? 'admin' : u.role === 'staff' ? 'staff' : 'customer'}>
+                          {roleLabel(u.role)}
+                        </Badge>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -337,7 +344,7 @@ export default function Users() {
                             Credit wallet
                           </button>
                           <RoleSelect
-                            value={u.role === 'admin' ? 'admin' : 'customer'}
+                            value={['admin', 'staff', 'customer'].includes(u.role) ? u.role : 'customer'}
                             disabled={isSelf}
                             busy={busyId === u.id}
                             title={isSelf ? "You can't change your own role here" : undefined}
@@ -421,7 +428,7 @@ export default function Users() {
         title="Grant admin access"
         description={
           pendingPromote
-            ? `Make ${pendingPromote.full_name || pendingPromote.phone} an admin? They’ll be able to manage products, categories, and other users.`
+            ? `Make ${pendingPromote.full_name || pendingPromote.phone} an admin? They’ll be able to manage products, categories, admissions, and other users.`
             : ''
         }
         confirmLabel="Make admin"

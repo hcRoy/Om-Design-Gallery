@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext.jsx'
+import { canAccessAdmissions, defaultPathForRole, isAdmin } from '../lib/roles.js'
 
 function formatMoney(value) {
   return new Intl.NumberFormat('en-IN', {
@@ -22,6 +23,8 @@ export default function AvatarMenu() {
     '•'
 
   const walletBalance = Number(profile?.wallet_balance ?? 0)
+  const panelPath = defaultPathForRole(profile?.role)
+  const showOfficeLink = canAccessAdmissions(profile?.role)
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -88,6 +91,16 @@ export default function AvatarMenu() {
             >
               Wishlist
             </Link>
+            {showOfficeLink && (
+              <Link
+                to={panelPath}
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2 text-sm hover:bg-sand"
+              >
+                {isAdmin(profile?.role) ? 'Admin panel' : 'Admissions'}
+              </Link>
+            )}
             <button
               role="menuitem"
               onClick={() => {

@@ -213,27 +213,15 @@ export default function Admissions() {
                     {row.status}
                   </Badge>
                 </td>
-                <td className="px-4 py-3.5 text-right">
-                  <Link
-                    to={`/admin/admissions/${row.id}`}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-maroon hover:underline"
-                  >
-                    Open
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      aria-hidden="true"
+                    <td className="px-4 py-3.5 text-right">
+                  <div className="inline-flex items-center gap-3 justify-end">
+                    <Link
+                      to={`/admin/admissions/${row.id}`}
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-maroon hover:underline"
                     >
-                      <path
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        d="M9 18l6-6-6-6"
-                      />
-                    </svg>
-                  </Link>
+                      Open
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

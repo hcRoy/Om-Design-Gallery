@@ -3,15 +3,11 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
-import AdminRoute from './components/AdminRoute.jsx'
+import AdminRoute, { AdminOnlyRoute } from './components/AdminRoute.jsx'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
 
-// Route-level code splitting: Home loads eagerly (it's the most likely
-// landing page and first paint matters most there), everything else is
-// lazy so a visitor browsing only the public site never downloads the
-// admin panel's bundle, and vice versa.
 const About = lazy(() => import('./pages/About.jsx'))
 const Contact = lazy(() => import('./pages/Contact.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
@@ -31,6 +27,7 @@ const AdminOffers = lazy(() => import('./pages/admin/Offers.jsx'))
 const AdminSubcategories = lazy(() => import('./pages/admin/Subcategories.jsx'))
 const AdminAdmissions = lazy(() => import('./pages/admin/Admissions.jsx'))
 const AdminAdmissionDetail = lazy(() => import('./pages/admin/AdmissionDetail.jsx'))
+const AdminAdmissionEdit = lazy(() => import('./pages/admin/AdmissionEdit.jsx'))
 const AdminDesignTypes = lazy(() => import('./pages/admin/DesignTypes.jsx'))
 const AdminCarousel = lazy(() => import('./pages/admin/CarouselSlides.jsx'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail.jsx'))
@@ -44,6 +41,10 @@ function PageLoader() {
   )
 }
 
+function AdminOnly({ children }) {
+  return <AdminOnlyRoute>{children}</AdminOnlyRoute>
+}
+
 export default function App() {
   const location = useLocation()
   const isAdmin = location.pathname.startsWith('/admin')
@@ -52,9 +53,6 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <div className="min-h-screen flex flex-col">
-          {/* Skip link: first focusable element, visually hidden until
-              focused, so keyboard/screen-reader users can bypass the nav
-              instead of tabbing through it on every single page. */}
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50
@@ -99,18 +97,89 @@ export default function App() {
                     </AdminRoute>
                   }
                 >
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="products" element={<AdminProducts />} />
-                  <Route path="categories" element={<AdminCategories />} />
-                  <Route path="subcategories" element={<AdminSubcategories />} />
+                  <Route
+                    index
+                    element={
+                      <AdminOnly>
+                        <AdminDashboard />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="products"
+                    element={
+                      <AdminOnly>
+                        <AdminProducts />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="categories"
+                    element={
+                      <AdminOnly>
+                        <AdminCategories />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="subcategories"
+                    element={
+                      <AdminOnly>
+                        <AdminSubcategories />
+                      </AdminOnly>
+                    }
+                  />
                   <Route path="admissions" element={<AdminAdmissions />} />
                   <Route path="admissions/new" element={<AdminAdmissionNew />} />
                   <Route path="admissions/:id" element={<AdminAdmissionDetail />} />
-                  <Route path="design-types" element={<AdminDesignTypes />} />
-                  <Route path="carousel" element={<AdminCarousel />} />
-                  <Route path="users" element={<AdminUsers />} />
-                  <Route path="orders" element={<AdminOrders />} />
-                  <Route path="offers" element={<AdminOffers />} />
+                  <Route
+                    path="admissions/:id/edit"
+                    element={
+                      <AdminOnly>
+                        <AdminAdmissionEdit />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="design-types"
+                    element={
+                      <AdminOnly>
+                        <AdminDesignTypes />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="carousel"
+                    element={
+                      <AdminOnly>
+                        <AdminCarousel />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="users"
+                    element={
+                      <AdminOnly>
+                        <AdminUsers />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="orders"
+                    element={
+                      <AdminOnly>
+                        <AdminOrders />
+                      </AdminOnly>
+                    }
+                  />
+                  <Route
+                    path="offers"
+                    element={
+                      <AdminOnly>
+                        <AdminOffers />
+                      </AdminOnly>
+                    }
+                  />
                 </Route>
               </Routes>
             </Suspense>
