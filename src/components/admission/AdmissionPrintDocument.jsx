@@ -6,6 +6,7 @@ import {
 } from "../../lib/i18n/admissionTranslations.js";
 import { LOGO_SRC } from "../../data/studio.js";
 import FormNumberValue from "./FormNumberValue.jsx";
+import AadhaarFitImage from "./AadhaarFitImage.jsx";
 import "./admission-print.css";
 
 const GU_DIGITS = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯"];
@@ -133,6 +134,7 @@ export default function AdmissionPrintDocument({
   installments = [],
   language = "gu",
   photoUrl,
+  aadhaarUrls = [],
   signatureUrl,
 }) {
   const lang = language === "en" ? "en" : "gu";
@@ -149,6 +151,7 @@ export default function AdmissionPrintDocument({
   const endParts = String(admission?.class_end_time ?? "")
     .split(/[:\s]/)
     .filter(Boolean);
+  const aadhaarImages = Array.isArray(aadhaarUrls) ? aadhaarUrls.filter(Boolean).slice(0, 2) : [];
 
   return (
     <div className="admission-print-root">
@@ -343,6 +346,32 @@ export default function AdmissionPrintDocument({
           </div>
         </div>
       </div>
+
+      {/* PAGE 3 — Aadhaar card images (optional) */}
+      {aadhaarImages.length > 0 ? (
+        <div className="page page-3">
+          <div className="aadhaar-page-body">
+            <div
+              className={`aadhaar-vertical-stack ${
+                aadhaarImages.length === 1 ? "aadhaar-stack-single" : "aadhaar-stack-dual"
+              }`}
+            >
+              {aadhaarImages.map((url, index) => (
+                <div
+                  className="aadhaar-vertical-card"
+                  key={url}
+                  aria-label={`Aadhaar card ${index + 1}`}
+                >
+                  <AadhaarFitImage
+                    src={url}
+                    alt={`Aadhaar card ${index + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

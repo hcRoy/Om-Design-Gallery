@@ -689,6 +689,103 @@
   padding: 4mm 4mm 3.5mm;
 }
 
+.admission-print-root .aadhaar-section {
+  flex-shrink: 0;
+  margin-top: 3mm;
+  border: 1px solid var(--form-border);
+  padding: 3mm;
+}
+
+.admission-print-root .aadhaar-title {
+  font-size: 12.5px;
+  font-weight: bold;
+  margin-bottom: 2.5mm;
+}
+
+.admission-print-root .aadhaar-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3mm;
+}
+
+.admission-print-root .aadhaar-card {
+  height: 32mm;
+  border: 1px solid var(--form-border);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.admission-print-root .aadhaar-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+/*
+ * Page 3 Aadhaar layout
+ * Equal vertical slots that NEVER grow with image intrinsic height.
+ * Key: min-height: 0 on the flex/grid chain + absolute image + object-fit.
+ */
+.admission-print-root .page-3 {
+  /* Slightly tighter padding so cards get more usable height */
+  padding: 6mm 7mm;
+}
+
+.admission-print-root .page-3 .aadhaar-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.admission-print-root .page-3 .aadhaar-vertical-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 4mm;
+  overflow: hidden;
+  background: #fff;
+}
+
+.admission-print-root .page-3 .aadhaar-stack-dual {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.admission-print-root .page-3 .aadhaar-stack-single {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.admission-print-root .page-3 .aadhaar-vertical-card {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--form-border);
+  background: #fff;
+}
+
+.admission-print-root .page-3 .aadhaar-fit-wrap {
+  position: absolute;
+  inset: 2.5mm;
+  width: auto;
+  height: auto;
+  overflow: hidden;
+  background: #fff;
+}
+
+.admission-print-root .page-3 .aadhaar-fit-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .admission-print-root .rules-fee-title {
   font-size: 12.5px;
   font-weight: bold;

@@ -18,6 +18,29 @@ function waitForImages(root) {
   )
 }
 
+/** Wait until Aadhaar canvas slots have finished contain-fit painting. */
+function waitForAadhaarCanvases(root, timeoutMs = 4000) {
+  const canvases = [...root.querySelectorAll('.aadhaar-fit-canvas')]
+  if (canvases.length === 0) return Promise.resolve()
+
+  return new Promise((resolve) => {
+    const started = Date.now()
+
+    const check = () => {
+      const ready = canvases.every(
+        (c) => c.dataset.aadhaarReady === '1' && c.width > 0 && c.height > 0,
+      )
+      if (ready || Date.now() - started > timeoutMs) {
+        resolve()
+        return
+      }
+      requestAnimationFrame(check)
+    }
+
+    check()
+  })
+}
+
 async function waitForFonts() {
   try {
     if (document.fonts?.ready) await document.fonts.ready
@@ -51,6 +74,7 @@ export async function downloadAdmissionPdf(element, filename) {
 
   await waitForFonts()
   await waitForImages(element)
+  await waitForAadhaarCanvases(element)
 
   const host = element.closest('.admission-pdf-export')
   const prev = host

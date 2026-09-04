@@ -15,6 +15,7 @@ import {
   updateAdmissionInstallment,
   deleteAdmissionInstallment,
   getAdmissionAssetSignedUrl,
+  getAdmissionAssetSignedUrls,
 } from '../../lib/admin.js'
 
 const STATUS_OPTIONS = ['pending', 'reviewed', 'enrolled', 'rejected']
@@ -35,6 +36,7 @@ export default function AdmissionDetail() {
   const [admission, setAdmission] = useState(null)
   const [installments, setInstallments] = useState([])
   const [photoUrl, setPhotoUrl] = useState(null)
+  const [aadhaarUrls, setAadhaarUrls] = useState([])
   const [signatureUrl, setSignatureUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -57,10 +59,20 @@ export default function AdmissionDetail() {
     if (row?.student_photo_url) {
       const { url } = await getAdmissionAssetSignedUrl(row.student_photo_url)
       setPhotoUrl(url)
+    } else {
+      setPhotoUrl(null)
+    }
+    if (row?.aadhaar_card_urls?.length) {
+      const { urls } = await getAdmissionAssetSignedUrls(row.aadhaar_card_urls)
+      setAadhaarUrls(urls)
+    } else {
+      setAadhaarUrls([])
     }
     if (row?.student_signature_url) {
       const { url } = await getAdmissionAssetSignedUrl(row.student_signature_url)
       setSignatureUrl(url)
+    } else {
+      setSignatureUrl(null)
     }
     setError('')
     setLoading(false)
@@ -161,6 +173,7 @@ export default function AdmissionDetail() {
       installments={installments}
       language={pdfLanguage}
       photoUrl={photoUrl}
+      aadhaarUrls={aadhaarUrls}
       signatureUrl={signatureUrl}
       onError={(msg) => showToast(msg, { type: 'error' })}
     >
@@ -222,6 +235,7 @@ export default function AdmissionDetail() {
                 />
                 <FieldRow label="Batch type" value={admission.batch_type} />
                 <FieldRow label="Package" value={admission.package} />
+                <FieldRow label="Aadhaar images" value={admission.aadhaar_card_urls?.length || null} />
                 <FieldRow label="Language" value={admission.preferred_language} />
                 <FieldRow
                   label="Submitted"
@@ -241,6 +255,21 @@ export default function AdmissionDetail() {
                 <div className="bg-white rounded-xl border border-ink/8 p-4">
                   <p className="text-xs font-bold uppercase text-ink-soft mb-2">Signature</p>
                   <img src={signatureUrl} alt="" className="w-full rounded-lg border border-ink/10 bg-white" />
+                </div>
+              )}
+              {aadhaarUrls.length > 0 && (
+                <div className="bg-white rounded-xl border border-ink/8 p-4">
+                  <p className="text-xs font-bold uppercase text-ink-soft mb-3">Aadhaar images</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {aadhaarUrls.map((url, index) => (
+                      <img
+                        key={url}
+                        src={url}
+                        alt={`Aadhaar ${index + 1}`}
+                        className="w-full rounded-lg border border-ink/10 bg-white"
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -362,6 +391,7 @@ export default function AdmissionDetail() {
                 installments={installments}
                 language={pdfLanguage}
                 photoUrl={photoUrl}
+                aadhaarUrls={aadhaarUrls}
                 signatureUrl={signatureUrl}
               />
             </div>

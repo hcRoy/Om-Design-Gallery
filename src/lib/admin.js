@@ -456,6 +456,16 @@ export async function getAdmissionAssetSignedUrl(path, expiresIn = 3600) {
   return { url: data?.signedUrl ?? null, error: null }
 }
 
+export async function getAdmissionAssetSignedUrls(paths = [], expiresIn = 3600) {
+  if (!supabase) return { urls: [], error: NOT_CONFIGURED_ERROR }
+  if (!Array.isArray(paths) || paths.length === 0) return { urls: [], error: null }
+
+  const results = await Promise.all(paths.map((path) => getAdmissionAssetSignedUrl(path, expiresIn)))
+  const firstError = results.find((row) => row.error)?.error
+  if (firstError) return { urls: [], error: firstError }
+  return { urls: results.map((row) => row.url).filter(Boolean), error: null }
+}
+
 function dataUrlToBlob(dataUrl) {
   const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl)
   if (!match) return null
@@ -467,6 +477,19 @@ function dataUrlToBlob(dataUrl) {
   } catch {
     return null
   }
+}
+
+async function uploadAdmissionAsset(path, blob) {
+  const { error } = await supabase.storage
+    .from('admission-photos')
+    .upload(path, blob, { contentType: blob.type, upsert: false })
+  return { error: error?.message ?? null }
+}
+
+async function removeAdmissionAssets(paths) {
+  const valid = (paths ?? []).filter(Boolean)
+  if (valid.length === 0) return
+  await supabase.storage.from('admission-photos').remove(valid)
 }
 
 /** Admin-only: create admission with photo/signature uploads and form number. */
@@ -484,20 +507,43 @@ export async function createAdmission(payload) {
   const sigBlob = dataUrlToBlob(payload.student_signature)
   if (!sigBlob) return { admission: null, error: 'Invalid signature' }
 
+  const aadhaarBlobs = (payload.aadhaar_cards ?? []).map((row) => dataUrlToBlob(row)).filter(Boolean)
+  if (aadhaarBlobs.length !== (payload.aadhaar_cards ?? []).length) {
+    return { admission: null, error: 'Invalid Aadhaar image upload' }
+  }
+  if (aadhaarBlobs.length > 2) {
+    return { admission: null, error: 'You can upload up to 2 Aadhaar images only' }
+  }
+
   const admissionId = crypto.randomUUID()
   const photoExt = photoBlob.type.includes('png') ? 'png' : 'jpg'
   const photoPath = `photos/${admissionId}.${photoExt}`
   const sigPath = `signatures/${admissionId}.png`
+  const aadhaarPaths = aadhaarBlobs.map((blob, index) => {
+    const ext = blob.type.includes('png') ? 'png' : 'jpg'
+    return `aadhaar/${admissionId}-${index + 1}.${ext}`
+  })
+  const uploadedPaths = []
 
-  const { error: photoErr } = await supabase.storage
-    .from('admission-photos')
-    .upload(photoPath, photoBlob, { contentType: photoBlob.type, upsert: false })
-  if (photoErr) return { admission: null, error: photoErr.message }
+  const { error: photoErr } = await uploadAdmissionAsset(photoPath, photoBlob)
+  if (photoErr) return { admission: null, error: photoErr }
+  uploadedPaths.push(photoPath)
 
-  const { error: sigErr } = await supabase.storage
-    .from('admission-photos')
-    .upload(sigPath, sigBlob, { contentType: sigBlob.type, upsert: false })
-  if (sigErr) return { admission: null, error: sigErr.message }
+  const { error: sigErr } = await uploadAdmissionAsset(sigPath, sigBlob)
+  if (sigErr) {
+    await removeAdmissionAssets(uploadedPaths)
+    return { admission: null, error: sigErr }
+  }
+  uploadedPaths.push(sigPath)
+
+  for (let i = 0; i < aadhaarBlobs.length; i++) {
+    const { error: aadhaarErr } = await uploadAdmissionAsset(aadhaarPaths[i], aadhaarBlobs[i])
+    if (aadhaarErr) {
+      await removeAdmissionAssets(uploadedPaths)
+      return { admission: null, error: aadhaarErr }
+    }
+    uploadedPaths.push(aadhaarPaths[i])
+  }
 
   const now = new Date().toISOString()
   const row = {
@@ -507,6 +553,7 @@ export async function createAdmission(payload) {
     student_mobile: payload.student_mobile,
     father_mobile: payload.father_mobile || null,
     student_photo_url: photoPath,
+    aadhaar_card_urls: aadhaarPaths,
     student_signature_url: sigPath,
     current_address: payload.current_address,
     permanent_address: payload.permanent_address,
@@ -523,7 +570,10 @@ export async function createAdmission(payload) {
   }
 
   const { data, error } = await supabase.from('admissions').insert(row).select().single()
-  if (error) return { admission: null, error: error.message }
+  if (error) {
+    await removeAdmissionAssets(uploadedPaths)
+    return { admission: null, error: error.message }
+  }
   return { admission: data, error: null }
 }
 

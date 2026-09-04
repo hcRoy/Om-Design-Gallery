@@ -10,6 +10,7 @@ export default function AdmissionPdfExport({
   installments = [],
   language = 'gu',
   photoUrl,
+  aadhaarUrls = [],
   signatureUrl,
   onError,
   children,
@@ -44,6 +45,7 @@ export default function AdmissionPdfExport({
             installments={installments}
             language={language}
             photoUrl={photoUrl}
+            aadhaarUrls={aadhaarUrls}
             signatureUrl={signatureUrl}
           />
         </div>

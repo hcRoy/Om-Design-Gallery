@@ -8,6 +8,7 @@ create table if not exists public.admissions (
   student_name text not null,
   student_mobile text not null,
   student_photo_url text,
+  aadhaar_card_urls text[] not null default '{}',
   student_signature_url text,
   current_address text,
   permanent_address text,

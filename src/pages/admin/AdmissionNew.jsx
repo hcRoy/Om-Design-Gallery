@@ -8,6 +8,7 @@ import { createAdmission } from "../../lib/admin.js";
 import { formCopy, rules } from "../../lib/i18n/admissionTranslations.js";
 
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_AADHAAR_UPLOADS = 2;
 const MOBILE_RE = /^[6-9]\d{9}$/;
 const BATCH_TYPES = ["A", "B", "C", "D", "E", "F", "G"];
 
@@ -145,11 +146,13 @@ export default function AdmissionNew() {
   const [agreed, setAgreed] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoDataUrl, setPhotoDataUrl] = useState(null);
+  const [aadhaarPreviews, setAadhaarPreviews] = useState([]);
   const [signatureDataUrl, setSignatureDataUrl] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [photoDrag, setPhotoDrag] = useState(false);
   const fileInputRef = useRef(null);
+  const aadhaarInputRef = useRef(null);
 
   const t = formCopy[language];
   const ruleTexts = rules[language];
@@ -223,6 +226,54 @@ export default function AdmissionNew() {
     processPhotoFile(e.dataTransfer.files?.[0]);
   };
 
+  const processAadhaarFiles = async (fileList) => {
+    const files = Array.from(fileList ?? []);
+    if (files.length === 0) return;
+
+    const nextCount = aadhaarPreviews.length + files.length;
+    if (nextCount > MAX_AADHAAR_UPLOADS) {
+      setFieldErrors((err) => ({ ...err, aadhaar_cards: t.errors.aadhaarLimit }));
+      return;
+    }
+
+    try {
+      const nextItems = [];
+      for (const file of files) {
+        const type = file.type.toLowerCase();
+        if (!["image/jpeg", "image/jpg", "image/png"].includes(type)) {
+          setFieldErrors((err) => ({ ...err, aadhaar_cards: t.errors.aadhaarType }));
+          return;
+        }
+        if (file.size > MAX_PHOTO_BYTES) {
+          setFieldErrors((err) => ({ ...err, aadhaar_cards: t.errors.aadhaarSize }));
+          return;
+        }
+
+        const dataUrl = await readFileAsDataUrl(file);
+        nextItems.push({
+          id: crypto.randomUUID(),
+          name: file.name,
+          dataUrl,
+        });
+      }
+
+      setAadhaarPreviews((rows) => [...rows, ...nextItems]);
+      setFieldErrors((err) => ({ ...err, aadhaar_cards: undefined }));
+    } catch {
+      showToast("Could not read Aadhaar image", { type: "error" });
+    } finally {
+      if (aadhaarInputRef.current) aadhaarInputRef.current.value = "";
+    }
+  };
+
+  const handleAadhaarChange = (e) => processAadhaarFiles(e.target.files);
+
+  const removeAadhaar = (id) => {
+    setAadhaarPreviews((rows) => rows.filter((row) => row.id !== id));
+    setFieldErrors((err) => ({ ...err, aadhaar_cards: undefined }));
+    if (aadhaarInputRef.current) aadhaarInputRef.current.value = "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -235,6 +286,7 @@ export default function AdmissionNew() {
       student_mobile: mobile,
       father_mobile: fatherMobile || null,
       student_photo: photoDataUrl,
+      aadhaar_cards: aadhaarPreviews.map((row) => row.dataUrl),
       student_signature: signatureDataUrl,
       current_address: form.current_address.trim(),
       permanent_address: form.permanent_address.trim(),
@@ -407,6 +459,70 @@ export default function AdmissionNew() {
                           accept="image/jpeg,image/png"
                           className="hidden"
                           onChange={handlePhotoChange}
+                        />
+                      </div>
+                    </div>
+                  </FormField>
+
+                  <FormField
+                    label={t.aadhaarLabel}
+                    hint={t.aadhaarHint}
+                    htmlFor="aadhaar_cards"
+                    optionalLabel={t.optionalLabel}
+                    error={fieldErrors.aadhaar_cards}
+                  >
+                    <div className="space-y-3">
+                      {aadhaarPreviews.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {aadhaarPreviews.map((row, index) => (
+                            <div
+                              key={row.id}
+                              className="rounded-2xl border border-ink/12 bg-white overflow-hidden"
+                            >
+                              <div className="aspect-[4/3] bg-sand/40">
+                                <img
+                                  src={row.dataUrl}
+                                  alt={`Aadhaar ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+                                <p className="text-xs text-ink-soft truncate">
+                                  {row.name || `Aadhaar ${index + 1}`}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAadhaar(row.id)}
+                                  className="text-xs font-semibold text-red-600 hover:underline"
+                                >
+                                  {t.removeAadhaar}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => aadhaarInputRef.current?.click()}
+                          className="btn-secondary !text-xs !py-2.5"
+                          disabled={aadhaarPreviews.length >= MAX_AADHAAR_UPLOADS}
+                        >
+                          {aadhaarPreviews.length > 0 ? t.addAadhaar : t.uploadAadhaar}
+                        </button>
+                        <span className="text-xs text-ink-soft">
+                          {aadhaarPreviews.length}/{MAX_AADHAAR_UPLOADS} {t.aadhaarUploadedSuffix}
+                        </span>
+                        <input
+                          id="aadhaar_cards"
+                          ref={aadhaarInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png"
+                          multiple
+                          className="hidden"
+                          onChange={handleAadhaarChange}
                         />
                       </div>
                     </div>
