@@ -12,7 +12,7 @@ function formatMoney(value) {
   }).format(Number(value || 0))
 }
 
-export default function AvatarMenu() {
+export default function AvatarMenu({ compact = false }) {
   const { profile, user, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -35,23 +35,46 @@ export default function AvatarMenu() {
   }, [])
 
   return (
-    <div className="relative flex items-center gap-2" ref={ref}>
+    <div className={`relative flex items-center ${compact ? 'gap-1.5' : 'gap-2'}`} ref={ref}>
       <Link
         to="/account"
-        className="hidden sm:inline-flex xl:inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5
-                   text-xs font-semibold text-ink hover:border-maroon/25 transition-colors duration-150"
+        className={`inline-flex items-center gap-1 rounded-full border border-ink/10 bg-white
+                   font-semibold text-ink hover:border-maroon/30 active:scale-[0.98]
+                   transition-[border-color,transform] duration-150
+                   ${compact ? 'pl-2 pr-2.5 py-1.5 text-[11px] shadow-sm' : 'px-3 py-1.5 text-xs'}`}
         title="Wallet balance"
+        aria-label={`Wallet ${formatMoney(walletBalance)}`}
       >
-        <span className="text-ink-soft font-medium">Wallet</span>
-        <span className="tabular-nums text-maroon">{formatMoney(walletBalance)}</span>
+        <span
+          className={`inline-flex items-center justify-center rounded-full bg-gold/20 text-gold-dark shrink-0 ${
+            compact ? 'w-5 h-5' : 'w-5 h-5 mr-0.5'
+          }`}
+          aria-hidden="true"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 8.5h15.5a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8.5Zm0 0V7a2 2 0 0 1 2-2h11"
+            />
+            <circle cx="17.5" cy="13.5" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+        {!compact && <span className="text-ink-soft font-medium">Wallet</span>}
+        <span className="tabular-nums text-maroon leading-none">{formatMoney(walletBalance)}</span>
       </Link>
 
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="w-10 h-10 rounded-full bg-maroon text-ivory font-semibold text-sm
-                   flex items-center justify-center hover:bg-maroon-light transition-colors"
+        aria-label="Account menu"
+        className={`${compact ? 'w-9 h-9 text-xs ring-1 ring-maroon/15' : 'w-10 h-10 text-sm'}
+                   rounded-full bg-maroon text-ivory font-semibold
+                   flex items-center justify-center hover:bg-maroon-light
+                   active:scale-[0.96] transition-[background-color,transform]`}
       >
         {initial}
       </button>

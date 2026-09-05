@@ -7,6 +7,7 @@ export default function BrandMark({
   onClick,
   compact = false,
   stacked = false,
+  hideSubtitle = false,
   size,
   subtitle = "Embroidery Design",
 }) {
@@ -15,16 +16,16 @@ export default function BrandMark({
   const logoSize = compact ? "compact" : size === "lg" ? "lg" : "nav";
   const isStacked = compact && stacked;
   const logoClass = {
-    compact: isStacked ? "w-9 h-9" : "w-10 h-10",
+    compact: isStacked ? "w-9 h-9" : "w-9 h-9",
     nav: "w-11 h-11 md:w-12 md:h-12",
     lg: "w-[4.5rem] h-[4.5rem] md:w-20 md:h-20",
   }[logoSize];
-  const px = { compact: isStacked ? 36 : 40, nav: 48, lg: 80 }[logoSize];
+  const px = { compact: isStacked ? 36 : 36, nav: 48, lg: 80 }[logoSize];
 
   const nameClass = isStacked
     ? "text-base leading-snug"
     : compact
-      ? "text-base leading-tight"
+      ? "text-[15px] leading-tight"
       : "text-xl md:text-2xl leading-tight";
 
   return (
@@ -52,13 +53,15 @@ export default function BrandMark({
         >
           {STUDIO.name}
         </span>
-        <span
-          className={`text-[9px] md:text-[10px] tracking-widest2 uppercase mt-0.5 ${
-            inverted ? "text-gold-light" : "text-ink-soft"
-          }`}
-        >
-          {subtitle}
-        </span>
+        {!hideSubtitle && (
+          <span
+            className={`text-[9px] md:text-[10px] tracking-widest2 uppercase mt-0.5 ${
+              inverted ? "text-gold-light" : "text-ink-soft"
+            }`}
+          >
+            {subtitle}
+          </span>
+        )}
       </span>
     </Tag>
   );

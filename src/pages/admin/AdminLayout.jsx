@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import BrandMark from '../../components/BrandMark.jsx'
 import Seo from '../../components/Seo.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
@@ -35,6 +35,8 @@ const allNavItems = [
 ]
 
 function NavList({ items, onNavigate }) {
+  const navigate = useNavigate()
+
   return (
     <nav className="flex flex-col gap-1">
       {items.map((item) => {
@@ -44,7 +46,13 @@ function NavList({ items, onNavigate }) {
             key={item.to}
             to={item.to}
             end={item.end}
-            onClick={onNavigate}
+            onClick={(e) => {
+              // Close first, then navigate — avoids mobile tap falling through
+              // a full-screen backdrop and the drawer staying open.
+              e.preventDefault()
+              onNavigate?.()
+              navigate(item.to)
+            }}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold
                transition-colors duration-150 ${
@@ -54,7 +62,7 @@ function NavList({ items, onNavigate }) {
                }`
             }
           >
-            <Icon className="w-[18px] h-[18px] shrink-0" />
+            <Icon className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
             {item.label}
           </NavLink>
         )
@@ -63,11 +71,18 @@ function NavList({ items, onNavigate }) {
   )
 }
 
-function Brand({ stacked = false, subtitle = 'Admin' }) {
-  return <BrandMark compact subtitle={subtitle} stacked={stacked} />
+function Brand({ stacked = false, subtitle = 'Admin', onNavigate }) {
+  return (
+    <BrandMark
+      compact
+      subtitle={subtitle}
+      stacked={stacked}
+      onClick={onNavigate}
+    />
+  )
 }
 
-function SidebarFooter() {
+function SidebarFooter({ onNavigate }) {
   const { profile, user } = useAuth()
   const name = profile?.full_name || user?.phone || 'User'
   const initial = (name.trim()[0] || 'U').toUpperCase()
@@ -86,6 +101,7 @@ function SidebarFooter() {
       </div>
       <Link
         to="/"
+        onClick={() => onNavigate?.()}
         className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-ink-soft
                    hover:text-maroon hover:bg-sand transition-colors duration-150"
       >
@@ -93,6 +109,49 @@ function SidebarFooter() {
         Back to site
       </Link>
     </div>
+  )
+}
+
+function MobileDrawer({ open, onClose, navItems, brandSubtitle }) {
+  if (!open) return null
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex lg:hidden" role="presentation">
+      {/* Panel first — not under a full-screen overlay, so taps hit the links */}
+      <aside
+        className="flex h-full w-[min(280px,86vw)] flex-col border-r border-ink/8
+                   bg-ivory px-3 py-5 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Office menu"
+      >
+        <div className="mb-6 flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 overflow-hidden pr-1">
+            <Brand stacked subtitle={brandSubtitle} onNavigate={onClose} />
+          </div>
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+                       text-ink-soft transition-colors duration-150 hover:bg-sand hover:text-ink"
+          >
+            <IconX className="w-4 h-4" />
+          </button>
+        </div>
+        <NavList items={navItems} onNavigate={onClose} />
+        <SidebarFooter onNavigate={onClose} />
+      </aside>
+
+      {/* Dimmed area only beside the panel */}
+      <button
+        type="button"
+        className="h-full min-w-0 flex-1 border-0 bg-ink/40 backdrop-blur-sm"
+        aria-label="Close menu"
+        onClick={onClose}
+      />
+    </div>,
+    document.body,
   )
 }
 
@@ -112,17 +171,22 @@ export default function AdminLayout() {
   const seoTitle = staff && !admin ? 'Admissions' : 'Admin'
 
   const closeMobile = () => setMobileOpen(false)
-  const toggleMobile = () => setMobileOpen((v) => !v)
 
-  useEffect(() => {
+  // Sync close before paint whenever the route changes
+  useLayoutEffect(() => {
     setMobileOpen(false)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   useEffect(() => {
-    if (!mobileOpen) return
+    if (!mobileOpen) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
+      window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
   }, [mobileOpen])
@@ -149,59 +213,21 @@ export default function AdminLayout() {
               type="button"
               aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileOpen}
-              onClick={toggleMobile}
-              className="relative z-10 w-9 h-9 shrink-0 rounded-xl text-ink hover:bg-sand inline-flex items-center justify-center transition-colors duration-150"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center
+                         rounded-xl text-ink transition-colors duration-150 hover:bg-sand"
             >
               {mobileOpen ? <IconX className="w-5 h-5" /> : <IconMenu className="w-5 h-5" />}
             </button>
           </div>
         </header>
 
-        <AnimatePresence>
-          {mobileOpen && (
-            <motion.div
-              className="fixed inset-0 z-40 lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              <button
-                type="button"
-                className="absolute inset-0 bg-ink/40 backdrop-blur-sm border-0 cursor-default"
-                onClick={closeMobile}
-                aria-label="Close menu"
-              />
-              <motion.aside
-                initial={{ x: -16, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -16, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="relative z-10 w-[min(280px,86vw)] h-full bg-ivory border-r border-ink/8 px-3 py-5 flex flex-col shadow-xl"
-                role="dialog"
-                aria-modal="true"
-                aria-label="Office menu"
-              >
-                <div className="flex items-start justify-between gap-2 mb-6">
-                  <div className="min-w-0 flex-1 overflow-hidden pr-1">
-                    <Brand stacked subtitle={brandSubtitle} />
-                  </div>
-                  <button
-                    type="button"
-                    aria-label="Close menu"
-                    onClick={closeMobile}
-                    className="relative z-10 w-9 h-9 shrink-0 rounded-lg text-ink-soft hover:bg-sand hover:text-ink
-                               inline-flex items-center justify-center transition-colors duration-150"
-                  >
-                    <IconX className="w-4 h-4" />
-                  </button>
-                </div>
-                <NavList items={navItems} onNavigate={closeMobile} />
-                <SidebarFooter />
-              </motion.aside>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <MobileDrawer
+          open={mobileOpen}
+          onClose={closeMobile}
+          navItems={navItems}
+          brandSubtitle={brandSubtitle}
+        />
 
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
           <div className="max-w-6xl mx-auto w-full">

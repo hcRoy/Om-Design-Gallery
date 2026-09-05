@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ThreadDivider from './ThreadDivider.jsx'
 import BrandMark from './BrandMark.jsx'
-import { STUDIO } from '../data/studio.js'
+import { STUDIO, getWhatsAppUrl } from '../data/studio.js'
 
 /**
  * JUDGMENT CALL: newsletter form has no backend yet — there's no
@@ -86,6 +86,16 @@ export default function Footer() {
               <p>
                 <a href={`tel:${STUDIO.phoneTel}`} className="hover:text-gold-light transition-colors duration-150">
                   {STUDIO.phoneDisplay}
+                </a>
+              </p>
+              <p>
+                <a
+                  href={getWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-gold-light transition-colors duration-150"
+                >
+                  WhatsApp us
                 </a>
               </p>
               <p>

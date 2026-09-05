@@ -4,7 +4,10 @@ import { Link, useLocation } from "react-router-dom";
 import Section from "../components/Section.jsx";
 import Card from "../components/Card.jsx";
 import CategoryCard from "../components/CategoryCard.jsx";
-import HeroCarousel, { StaticHomeHero } from "../components/HeroCarousel.jsx";
+import HeroCarousel, {
+  HERO_MEDIA_CLASS,
+  StaticHomeHero,
+} from "../components/HeroCarousel.jsx";
 import Seo from "../components/Seo.jsx";
 import WishlistButton from "../components/WishlistButton.jsx";
 import { stripHtml } from "../lib/html.js";
@@ -91,8 +94,8 @@ export default function Home() {
       />
 
       {!heroReady ? (
-        <section className="relative overflow-hidden text-ivory min-h-[78vh] flex items-center">
-          <div className="absolute inset-0 page-hero-gradient" />
+        <section className={`${HERO_MEDIA_CLASS} bg-maroon-dark`} aria-busy="true">
+          <div className="absolute inset-0 animate-pulse bg-ink/70" />
         </section>
       ) : slides.length > 0 ? (
         <HeroCarousel slides={slides} />

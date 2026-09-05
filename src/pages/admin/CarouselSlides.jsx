@@ -369,7 +369,7 @@ export default function CarouselSlides() {
               kind="image"
               accept="image/*"
               label="Slide image"
-              hint="Full-bleed hero image — JPG, PNG, or WebP"
+              hint="Best: 2:1 — 2400×1200. Overlay text is bottom-left on all screens; keep faces toward center-right. JPG/PNG/WebP."
               uploading={imageUploading}
               previewUrl={form.image_url}
               fileLabel={form.image_url ? "Image attached" : ""}

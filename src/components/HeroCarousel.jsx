@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import ThreadDivider from "./ThreadDivider.jsx";
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -15,10 +14,16 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
+const primaryBtn =
+  "inline-flex items-center justify-center gap-2 rounded-full bg-gold-light px-4 py-2.5 text-xs font-semibold tracking-wide text-ink transition-colors hover:bg-gold sm:px-6 sm:py-3 sm:text-sm";
+
+const secondaryBtn =
+  "inline-flex items-center justify-center gap-2 rounded-full border border-ivory/80 px-4 py-2.5 text-xs font-semibold tracking-wide text-ivory transition-colors hover:bg-ivory hover:text-maroon sm:px-6 sm:py-3 sm:text-sm";
+
 function SlideCta({ linkUrl }) {
   if (!linkUrl) {
     return (
-      <Link to="/designs" className="btn-light">
+      <Link to="/designs" className={primaryBtn}>
         Browse all designs
       </Link>
     );
@@ -27,7 +32,7 @@ function SlideCta({ linkUrl }) {
     return (
       <a
         href={linkUrl}
-        className="btn-light"
+        className={primaryBtn}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -36,16 +41,22 @@ function SlideCta({ linkUrl }) {
     );
   }
   return (
-    <Link to={linkUrl} className="btn-light">
+    <Link to={linkUrl} className={primaryBtn}>
       Explore
     </Link>
   );
 }
 
 /**
- * Stacked homepage hero carousel — image row, then copy row on brand gradient.
- * When `slides` is empty, Home keeps StaticHomeHero instead.
+ * Overlay hero on every screen (bottom-left copy).
+ * Desktop: 2.4:1 aspect (shorter band; upload still 2:1 with light crop).
+ * Mobile: fixed height + compact type so the overlay layout doesn’t break.
  */
+export const HERO_ASPECT = "2.4 / 1";
+export const HERO_UPLOAD_SIZE = { width: 2400, height: 1200, label: "2:1" };
+export const HERO_MEDIA_CLASS =
+  "relative w-full overflow-hidden bg-ink h-[48vh] sm:h-[46vh] md:h-auto md:aspect-[2.4/1]";
+
 export default function HeroCarousel({ slides }) {
   const reducedMotion = usePrefersReducedMotion();
   const [index, setIndex] = useState(0);
@@ -56,198 +67,149 @@ export default function HeroCarousel({ slides }) {
     if (count <= 1 || reducedMotion) return undefined;
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % count);
-    }, 6000);
+    }, 7000);
     return () => window.clearInterval(id);
   }, [count, reducedMotion, index]);
 
-  const go = (next) => setIndex(((next % count) + count) % count);
-
   return (
     <section
-      className="relative overflow-hidden bg-maroon-dark text-ivory"
+      className={`${HERO_MEDIA_CLASS} text-ivory`}
       aria-roledescription="carousel"
       aria-label="Featured highlights"
     >
-      <div className="flex flex-col">
-        {/* Row 1 — full-width photo, no overlay */}
-        <div className="relative w-full h-[90vh] overflow-hidden bg-ink">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={slide.id}
+          className="absolute inset-0"
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reducedMotion ? undefined : { opacity: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.55 }}
+        >
+          <img
+            src={slide.image_url}
+            alt={slide.title || "Featured design"}
+            width={HERO_UPLOAD_SIZE.width}
+            height={HERO_UPLOAD_SIZE.height}
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover object-[center_30%] md:object-center"
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Soft scrim — stronger at bottom-left where copy sits */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[1]
+                   bg-gradient-to-t from-ink/80 via-ink/30 to-ink/10"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1]
+                   bg-gradient-to-r from-ink/55 via-ink/15 to-transparent"
+        aria-hidden="true"
+      />
+
+      {/* Overlay stack: copy bottom-left, dots centered under it */}
+      <div className="absolute inset-0 z-10 flex flex-col justify-end">
+        <div className="px-4 pb-3 pt-10 sm:px-6 sm:pb-4 md:px-10 md:pb-8 lg:px-14 lg:pb-9">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={slide.id}
-              className="absolute inset-0"
-              initial={reducedMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={reducedMotion ? undefined : { opacity: 0 }}
-              transition={{ duration: 0.5 }}
+              className="max-w-xl text-left
+                         [text-shadow:0_1px_2px_rgba(0,0,0,0.5),0_4px_20px_rgba(0,0,0,0.35)]"
+              initial={reducedMotion ? false : { opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
             >
-              <motion.img
-                src={slide.image_url}
-                alt={slide.title || "Featured design"}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-                initial={reducedMotion ? false : { scale: 1 }}
-                animate={{ scale: reducedMotion ? 1 : 1.04 }}
-                transition={{ duration: 8, ease: "linear" }}
-              />
+              <p className="eyebrow text-[0.65rem] text-gold-light sm:text-xs">
+                Om Design &amp; Classes
+              </p>
+              {slide.title ? (
+                <h1 className="mt-1.5 text-xl leading-[1.15] text-ivory sm:mt-2 sm:text-2xl md:text-4xl lg:text-[2.5rem]">
+                  {slide.title}
+                </h1>
+              ) : (
+                <h1 className="mt-1.5 text-xl leading-[1.15] text-ivory sm:mt-2 sm:text-2xl md:text-4xl lg:text-[2.5rem]">
+                  Embroidery designs,{" "}
+                  <span className="italic text-gold-light">stitch-ready</span>{" "}
+                  for your machine.
+                </h1>
+              )}
+              {slide.subtitle ? (
+                <p className="mt-2 max-w-md text-xs leading-relaxed text-ivory/90 line-clamp-2 sm:text-sm md:mt-3 md:line-clamp-none md:text-base">
+                  {slide.subtitle}
+                </p>
+              ) : (
+                <p className="mt-2 hidden max-w-md text-sm leading-relaxed text-ivory/90 sm:block md:mt-3 md:text-base">
+                  Machine-ready DST, EMB, DHE and DHP — drawn and digitised in
+                  Surat for clean, consistent stitch-outs.
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2 sm:mt-5 sm:gap-3">
+                <SlideCta linkUrl={slide.link_url} />
+                <Link to="/categories" className={secondaryBtn}>
+                  Explore categories
+                </Link>
+              </div>
             </motion.div>
           </AnimatePresence>
 
-          {/* Gold accent between image and copy */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-gold-light/80 to-transparent"
-            aria-hidden="true"
-          />
-        </div>
-
-        {/* Row 2 — copy on solid brand panel */}
-        <div className="relative page-hero-gradient">
-          <div
-            className="absolute inset-0 opacity-15 pointer-events-none"
-            aria-hidden="true"
-          >
-            <ThreadDivider
-              variant="wave"
-              color="#C9A227"
-              className="absolute top-[12%] left-0 h-14 w-full"
-            />
-            <ThreadDivider
-              variant="stitch"
-              color="#E0C368"
-              className="absolute top-[36%] left-0 h-16 w-full"
-            />
-          </div>
-
-          <div className="relative z-10 w-full max-w-3xl mx-auto px-6 py-12 sm:py-14 md:py-16 lg:py-20 text-center">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={slide.id}
-                initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-              >
-                <p className="eyebrow text-gold-light">
-                  Om Design &amp; Classes
-                </p>
-                {slide.title ? (
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] mt-4 leading-[1.08] text-ivory">
-                    {slide.title}
-                  </h1>
-                ) : (
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] mt-4 leading-[1.08] text-ivory">
-                    Embroidery designs,{" "}
-                    <span className="italic text-gold-light">stitch-ready</span>{" "}
-                    for your machine.
-                  </h1>
-                )}
-                {slide.subtitle && (
-                  <p className="mt-5 text-base md:text-lg text-ivory/85 max-w-xl mx-auto leading-relaxed">
-                    {slide.subtitle}
-                  </p>
-                )}
-                <div className="mt-8 flex flex-wrap gap-4 justify-center">
-                  <SlideCta linkUrl={slide.link_url} />
-                  <Link to="/categories" className="btn-ghost-light">
-                    Explore categories
-                  </Link>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-
-            {count > 1 && (
-              <div
-                className="mt-10 flex items-center justify-center gap-3"
-                aria-live="polite"
-              >
+          {count > 1 && (
+            <div
+              className="mt-4 flex items-center justify-center gap-1.5 sm:mt-5 sm:gap-2 md:mt-6"
+              aria-live="polite"
+            >
+              {slides.map((s, i) => (
                 <button
+                  key={s.id}
                   type="button"
-                  aria-label="Previous slide"
-                  onClick={() => go(index - 1)}
-                  className="w-9 h-9 rounded-full border border-ivory/30 text-ivory text-lg
-                             hover:bg-ivory/10 transition-colors"
-                >
-                  ‹
-                </button>
-                <div className="flex gap-2">
-                  {slides.map((s, i) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      aria-label={`Go to slide ${i + 1}`}
-                      aria-current={i === index}
-                      onClick={() => setIndex(i)}
-                      className={`h-2 rounded-full transition-all ${
-                        i === index
-                          ? "w-7 bg-gold-light"
-                          : "w-2 bg-ivory/40 hover:bg-ivory/70"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  aria-label="Next slide"
-                  onClick={() => go(index + 1)}
-                  className="w-9 h-9 rounded-full border border-ivory/30 text-ivory text-lg
-                             hover:bg-ivory/10 transition-colors"
-                >
-                  ›
-                </button>
-              </div>
-            )}
-          </div>
+                  aria-label={`Go to slide ${i + 1}`}
+                  aria-current={i === index}
+                  onClick={() => setIndex(i)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === index
+                      ? "w-6 bg-gold-light sm:w-8"
+                      : "w-1.5 bg-ivory/45 hover:bg-ivory/75 sm:w-4"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-/** Static fallback hero used when no carousel slides are configured. */
+/** Static fallback when no carousel slides are configured. */
 export function StaticHomeHero() {
   return (
-    <section className="relative overflow-hidden text-ivory min-h-[78vh] flex items-center">
-      <div className="absolute inset-0 page-hero-gradient" />
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        aria-hidden="true"
-      >
-        <ThreadDivider
-          variant="wave"
-          color="#C9A227"
-          className="absolute top-[18%] left-0 h-16"
-        />
-        <ThreadDivider
-          variant="stitch"
-          color="#E0C368"
-          className="absolute top-[42%] left-0 h-20"
-        />
-        <ThreadDivider
-          variant="wave"
-          color="#C9A227"
-          className="absolute bottom-[16%] left-0 h-14"
-        />
-      </div>
-      <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-32 w-full">
+    <section
+      className={`${HERO_MEDIA_CLASS} flex flex-col justify-end page-hero-gradient text-ivory`}
+    >
+      <div className="px-4 pb-8 pt-10 sm:px-6 md:px-10 lg:px-14">
         <motion.div
-          initial={{ opacity: 0, y: 28 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="max-w-2xl"
+          transition={{ duration: 0.65, ease: "easeOut" }}
+          className="max-w-xl text-left"
         >
-          <p className="eyebrow text-gold-light">Digital embroidery designs</p>
-          <h1 className="text-4xl md:text-6xl mt-5 leading-[1.08] text-ivory">
+          <p className="eyebrow text-gold-light">Om Design &amp; Classes</p>
+          <h1 className="mt-2 text-xl leading-[1.15] text-ivory sm:text-2xl md:text-4xl lg:text-[2.5rem]">
             Embroidery designs,{" "}
             <span className="italic text-gold-light">stitch-ready</span> for
             your machine.
           </h1>
-          <p className="mt-6 text-base md:text-lg text-ivory/80 max-w-md leading-relaxed">
+          <p className="mt-3 max-w-md text-sm leading-relaxed text-ivory/90">
             Drawn by hand in Surat, digitised as DST, EMB, DHE and DHP — so
             every border, booti and jaal stitches out exactly as it was drawn.
           </p>
-          <div className="mt-9 flex flex-wrap gap-4">
-            <Link to="/designs" className="btn-light">
+          <div className="mt-5 flex flex-wrap gap-2.5 sm:gap-3">
+            <Link to="/designs" className={primaryBtn}>
               Browse all designs
             </Link>
-            <Link to="/categories" className="btn-ghost-light">
+            <Link to="/categories" className={secondaryBtn}>
               Explore categories
             </Link>
           </div>

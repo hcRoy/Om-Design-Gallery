@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import AdminRoute, { AdminOnlyRoute } from './components/AdminRoute.jsx'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
+import ContactFab from './components/ContactFab.jsx'
 import Home from './pages/Home.jsx'
 
 const About = lazy(() => import('./pages/About.jsx'))
@@ -185,6 +186,7 @@ export default function App() {
             </Suspense>
           </main>
           {!isAdmin && <Footer />}
+          {!isAdmin && <ContactFab />}
         </div>
       </ToastProvider>
     </AuthProvider>
